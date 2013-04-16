@@ -1,0 +1,38 @@
+serviceUrl: "service:zookeeper:%s:%s"
+hostVariable: myHost
+portVariable: myPort
+networkInterface: 0
+serviceProperties:
+    id: 1
+    updateGroup: B
+    
+substitutions:
+    threads: 5
+    useZookeeper: true
+
+gossip:
+    seeds: 
+        - localhost:6754
+        - localhost:6543
+        
+services:
+  - format: "%s|%s"
+    service: service:thor:rmi
+    variable: theMightyThor
+    properties:
+      - eat me
+      - drink me
+    
+serviceCollections:
+  - cardinality: 5
+    format: "%s!%s"
+    properties:
+      - eat me
+      - drink me
+    separator: ":"
+    service: service:iron:man
+    variable: theInvincibleIronMan
+
+configurations:
+  - zookeeper.properties
+  - kafka.properties
