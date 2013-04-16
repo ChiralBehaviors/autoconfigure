@@ -29,24 +29,23 @@ import com.hellblazer.gossip.configuration.GossipConfiguration;
  */
 public class AutoConfiguration {
 	@JsonProperty
-	public final List<File> configurations = new ArrayList<>();
+	public List<File> configurations = new ArrayList<>();
 	@JsonProperty
-	public final GossipConfiguration gossip = new GossipConfiguration();
+	public GossipConfiguration gossip = new GossipConfiguration();
 	@JsonProperty
-	public final String hostVariable = "myHostName";
+	public String hostVariable = "myHostName";
 	@JsonProperty
-	public final int networkInterface = 0;
+	public String networkInterface = "eth0";
 	@JsonProperty
-	public final String portVariable = "myPortNumber";
+	public String portVariable = "myPortNumber";
 	@JsonProperty
-	public final List<ServiceCollection> serviceCollections = new ArrayList<>();
+	public List<ServiceCollection> serviceCollections = new ArrayList<>();
 	@JsonProperty
-	public final String serviceUrl = "service:someType:http:%s:%s/myURI";
+	public String serviceUrl = "service:someType:http:%s:%s/myURI";
 	@JsonProperty
-	public final Map<String, String> serviceProperties = new HashMap<>();
+	public Map<String, String> serviceProperties = new HashMap<>();
 	@JsonProperty
-	public final List<Service> services = new ArrayList<>();
+	public List<Service> services = new ArrayList<>();
 	@JsonProperty
-	public final Map<String, String> substitutions = new HashMap<>();
-
+	public Map<String, String> substitutions = new HashMap<>();
 }

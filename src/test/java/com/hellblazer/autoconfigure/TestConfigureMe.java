@@ -14,11 +14,21 @@
  */
 package com.hellblazer.autoconfigure;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.hellblazer.slp.ServiceScope;
+import static org.junit.Assert.*;
 
 /**
  * @author hhildebrand
@@ -27,10 +37,39 @@ import com.hellblazer.slp.ServiceScope;
 public class TestConfigureMe {
 
 	@Mock
-	ServiceScope discovery;
+	private ServiceScope discovery;
 
 	@Before
 	public void setup() {
 		MockitoAnnotations.initMocks(this);
+	}
+
+	@Test
+	public void testNoServicesRequired() {
+		String serviceFormat = "service:test:tcp://%s:%s";
+		Map<String, String> serviceProperties = new HashMap<String, String>();
+		List<Service> serviceDefinitions = new ArrayList<>();
+		List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
+		List<File> configurations = new ArrayList<>();
+		Map<String, String> substitutions = new HashMap<>();
+		ConfigureMe configureMe = new ConfigureMe(serviceFormat, "host",
+				"port", "en0", serviceProperties, discovery,
+				serviceDefinitions, serviceCollectionDefinitions,
+				configurations, substitutions);
+		final AtomicBoolean succeeded = new AtomicBoolean();
+		Runnable success = new Runnable() {
+			@Override
+			public void run() {
+				succeeded.set(true);
+			}
+		};
+		Runnable failure = new Runnable() {
+			@Override
+			public void run() {
+				succeeded.set(false);
+			}
+		};
+		configureMe.configure(success, failure, 10, TimeUnit.MILLISECONDS);
+		assertTrue(succeeded.get());
 	}
 }

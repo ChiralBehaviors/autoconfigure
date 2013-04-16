@@ -23,10 +23,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.InterfaceAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +62,7 @@ public class ConfigureMe {
 	private final List<File> configurations;
 	private final ServiceScope discovery;
 	private final String hostVariable;
-	private final int networkInterface;
+	private final String networkInterface;
 	private final String portVariable;
 	private final AtomicReference<Rendezvous> rendezvous = new AtomicReference<>();
 	private final Map<ServiceListener, ServiceCollection> serviceCollections = new HashMap<>();
@@ -118,7 +118,7 @@ public class ConfigureMe {
 	 *            the configuration files
 	 */
 	public ConfigureMe(String serviceFormat, String hostVariable,
-			String portVariable, int networkInterface,
+			String portVariable, String networkInterface,
 			Map<String, String> serviceProperties, ServiceScope discovery,
 			List<Service> serviceDefinitions,
 			List<ServiceCollection> serviceCollectionDefinitions,
@@ -154,10 +154,20 @@ public class ConfigureMe {
 	 */
 	public void configure(Runnable success, Runnable failure, long timeout,
 			TimeUnit unit) {
-		if (rendezvous.compareAndSet(null, new Rendezvous(getCardinality(),
-				successAction(success, failure), failureAction(failure)))) {
+		Runnable successAction = successAction(success, failure);
+		int cardinality = getCardinality();
+		if (!rendezvous.compareAndSet(null, new Rendezvous(cardinality,
+				successAction, failureAction(failure)))) {
 			throw new IllegalStateException("System is already configuring!");
 		}
+
+		registerService();
+
+		if (cardinality == 0) { // no services required
+			successAction.run();
+			return;
+		}
+
 		rendezvous
 				.get()
 				.scheduleCancellation(
@@ -178,7 +188,7 @@ public class ConfigureMe {
 	protected void allocatePort() {
 		NetworkInterface iface;
 		try {
-			iface = NetworkInterface.getByIndex(networkInterface);
+			iface = NetworkInterface.getByName(networkInterface);
 		} catch (SocketException e) {
 			String msg = String.format(
 					"Unable to obtain network interface[%s]", networkInterface);
@@ -186,30 +196,47 @@ public class ConfigureMe {
 			throw new IllegalStateException(msg, e);
 		}
 		if (iface == null) {
-			String msg = String.format("Unable to find network interface[%s]",
+			String msg = String.format("Unable to find network interface [%s]",
 					networkInterface);
 			logger.severe(msg);
 			throw new IllegalStateException(msg);
 		}
-		List<InterfaceAddress> interfaceAddresses = iface
-				.getInterfaceAddresses();
-		if (interfaceAddresses.isEmpty()) {
+		try {
+			if (!iface.isUp()) {
+				String msg = String.format("Network interface [%s] is not up!",
+						networkInterface);
+				logger.severe(msg);
+				throw new IllegalStateException(msg);
+			}
+		} catch (SocketException e) {
+			String msg = String.format(
+					"Unable to determin if network interface [%s] is up",
+					networkInterface);
+			logger.severe(msg);
+			throw new IllegalStateException(msg);
+		}
+		logger.info(String.format("Network interface [%s] is up",
+				iface.getDisplayName()));
+		Enumeration<InetAddress> interfaceAddresses = iface.getInetAddresses();
+		if (!interfaceAddresses.hasMoreElements()) {
 			String msg = String
 					.format("Unable to find any network address for interface[%s] {%s}",
 							networkInterface, iface.getDisplayName());
 			logger.severe(msg);
 			throw new IllegalStateException(msg);
 		}
-		InetAddress address = interfaceAddresses.get(0).getAddress();
+		InetAddress address = interfaceAddresses.nextElement();
 		int port = Utils.allocatePort(address);
 		if (port <= 0) {
 			String msg = String.format(
-					"Unable to allocate port on address [%s]", address);
+					"Unable to allocate port on address [%s]",
+					address.getCanonicalHostName());
 			logger.severe(msg);
 			throw new IllegalStateException(msg);
 		}
-		logger.info(String.format("Binding this service to [%s:%s]", port));
-		bound.set(new InetSocketAddress(address, port));
+		logger.info(String.format("Binding this service to [%s:%s]",
+				address.getCanonicalHostName(), port));
+		bound.set(new InetSocketAddress(address.getCanonicalHostName(), port));
 	}
 
 	protected void discover(ServiceReference reference, Service service) {
@@ -432,8 +459,8 @@ public class ConfigureMe {
 
 	protected void registerService() {
 		allocatePort();
-		String service = String.format(serviceFormat, bound.get().getAddress(),
-				bound.get().getPort());
+		String service = String.format(serviceFormat,
+				bound.get().getHostName(), bound.get().getPort());
 		try {
 			ServiceURL url = new ServiceURL(service);
 			logger.info(String.format(
