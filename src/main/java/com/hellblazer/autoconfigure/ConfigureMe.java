@@ -40,6 +40,7 @@ import com.hellblazer.nexus.GossipScope;
 import com.hellblazer.slp.InvalidSyntaxException;
 import com.hellblazer.slp.ServiceEvent;
 import com.hellblazer.slp.ServiceListener;
+import com.hellblazer.slp.ServiceReference;
 import com.hellblazer.slp.ServiceScope;
 import com.hellblazer.slp.ServiceURL;
 import com.hellblazer.utils.LabeledThreadFactory;
@@ -174,56 +175,6 @@ public class ConfigureMe {
 		}
 	}
 
-	protected Runnable successAction(final Runnable success,
-			final Runnable failure) {
-		return new Runnable() {
-			@Override
-			public void run() {
-				logger.info("All services have been discovered");
-				try {
-					processConfigurations(getPropertySubstitutions());
-				} catch (Throwable e) {
-					logger.log(Level.SEVERE, "Error processing configurations",
-							e);
-					failure.run();
-					return;
-				}
-				logger.info("Auto configuration successfully completed");
-				success.run();
-			}
-		};
-	}
-
-	protected Runnable failureAction(final Runnable failure) {
-		return new Runnable() {
-			@Override
-			public void run() {
-				logger.severe("Auto configuration failed due to not all services being discovered");
-				for (Service service : services.values()) {
-					if (!service.isDiscovered()) {
-						logger.severe(String
-								.format("Service [%s] has not been discovered",
-										service));
-					}
-				}
-				for (ServiceCollection serviceCollection : serviceCollections
-						.values()) {
-					if (!serviceCollection.isSatisfied()) {
-						int cardinality = serviceCollection.cardinality;
-						int discoveredCardinality = serviceCollection
-								.getDiscoveredCardinality();
-						logger.severe(String
-								.format("Service collection [%s] has not been satisfied, missing %s services",
-										serviceCollection, cardinality
-												- discoveredCardinality,
-										cardinality));
-					}
-				}
-				failure.run();
-			}
-		};
-	}
-
 	protected void allocatePort() {
 		NetworkInterface iface;
 		try {
@@ -261,6 +212,50 @@ public class ConfigureMe {
 		bound.set(new InetSocketAddress(address, port));
 	}
 
+	protected void discover(ServiceReference reference, Service service) {
+		logger.info(String.format("discovered [%s] for service [%s]",
+				reference.getUrl(), service));
+		service.discover(reference);
+	}
+
+	protected void discover(ServiceReference reference,
+			ServiceCollection serviceCollection) {
+		logger.info(String.format(
+				"discovered [%s] for service collection [%s]",
+				reference.getUrl(), serviceCollection));
+		serviceCollection.discover(reference);
+	}
+
+	protected Runnable failureAction(final Runnable failure) {
+		return new Runnable() {
+			@Override
+			public void run() {
+				logger.severe("Auto configuration failed due to not all services being discovered");
+				for (Service service : services.values()) {
+					if (!service.isDiscovered()) {
+						logger.severe(String
+								.format("Service [%s] has not been discovered",
+										service));
+					}
+				}
+				for (ServiceCollection serviceCollection : serviceCollections
+						.values()) {
+					if (!serviceCollection.isSatisfied()) {
+						int cardinality = serviceCollection.cardinality;
+						int discoveredCardinality = serviceCollection
+								.getDiscoveredCardinality();
+						logger.severe(String
+								.format("Service collection [%s] has not been satisfied, missing %s services",
+										serviceCollection, cardinality
+												- discoveredCardinality,
+										cardinality));
+					}
+				}
+				failure.run();
+			}
+		};
+	}
+
 	protected int getCardinality() {
 		int cardinality = 0;
 		cardinality += services.size();
@@ -272,179 +267,35 @@ public class ConfigureMe {
 		return cardinality;
 	}
 
-	protected void registerListeners() {
-		registerServiceCollectionListeners();
-		registerServiceListeners();
-	}
-
-	protected void registerService() {
-		allocatePort();
-		String service = String.format(serviceFormat, bound.get().getAddress(),
-				bound.get().getPort());
-		try {
-			ServiceURL url = new ServiceURL(service);
-			logger.info(String.format(
-					"Registering this service as [%s] with properties [%s]",
-					url, serviceProperties));
-			discovery.register(url, serviceProperties);
-		} catch (MalformedURLException e) {
-			String msg = String.format("Invalid syntax for service URL [%s]",
-					service);
-			logger.log(Level.SEVERE, msg, e);
-			throw new IllegalArgumentException(msg, e);
-		}
-	}
-
-	protected void registerServiceCollectionListeners() {
-		for (Map.Entry<ServiceListener, ServiceCollection> entry : serviceCollections
+	protected Map<String, String> getPropertySubstitutions() {
+		Map<String, String> properties = new HashMap<>();
+		// First the system properties
+		for (Map.Entry<Object, Object> entry : System.getProperties()
 				.entrySet()) {
-			ServiceCollection service = entry.getValue();
-			try {
-				logger.info(String.format(
-						"Registering listener for service collection [%s]",
-						service));
-				discovery.addServiceListener(entry.getKey(),
-						service.constructFilter());
-			} catch (InvalidSyntaxException e) {
-				String msg = String
-						.format("Invalid syntax for discovered service collection [%s]",
-								service);
-				logger.log(Level.SEVERE, msg, e);
-				throw new IllegalArgumentException(msg, e);
-			}
-		}
-	}
-
-	protected void registerServiceListeners() {
-		for (Map.Entry<ServiceListener, Service> entry : services.entrySet()) {
-			Service service = entry.getValue();
-			try {
-				logger.info(String.format(
-						"Registering listener for service [%s]", service));
-				discovery.addServiceListener(entry.getKey(),
-						service.constructFilter());
-			} catch (InvalidSyntaxException e) {
-				String msg = String.format(
-						"Invalid syntax for discovered service [%s]", service);
-				logger.log(Level.SEVERE, msg, e);
-				throw new IllegalArgumentException(msg, e);
-			}
-		}
-	}
-
-	protected ServiceListener serviceCollectionListener() {
-		return new ServiceListener() {
-			@Override
-			public void serviceChanged(ServiceEvent event) {
-				switch (event.getType()) {
-				case REGISTERED:
-					ServiceCollection serviceCollection = serviceCollections
-							.get(this);
-					if (serviceCollection == null) {
-						String msg = String.format(
-								"No existing listener matching [%s]", event
-										.getReference().getUrl());
-						logger.severe(msg);
-						throw new IllegalStateException(msg);
-					}
-					logger.info(String.format(
-							"discovered [%s] for service collection [%s]",
-							event.getReference().getUrl(), serviceCollection));
-					serviceCollection.discover(event.getReference());
-					break;
-				case UNREGISTERED:
-					String msg = String
-							.format("service [%s] has been unregistered after acquisition",
-									event.getReference().getUrl());
-					logger.info(msg);
-					break;
-				case MODIFIED:
-					logger.info(String.format(
-							"service [%s] has been modified after acquisition",
-							event.getReference().getUrl()));
-					break;
-				}
-			}
-		};
-	}
-
-	protected ServiceListener serviceListener() {
-		return new ServiceListener() {
-			@Override
-			public void serviceChanged(ServiceEvent event) {
-				switch (event.getType()) {
-				case REGISTERED:
-					Service service = services.get(this);
-					if (service == null) {
-						String msg = String.format(
-								"No existing listener matching [%s]", event
-										.getReference().getUrl());
-						logger.severe(msg);
-						throw new IllegalStateException(msg);
-					}
-					logger.info(String.format(
-							"discovered [%s] for service [%s]", event
-									.getReference().getUrl(), service));
-					service.discover(event.getReference());
-					break;
-				case UNREGISTERED:
-					logger.info(String
-							.format("service [%s] has been unregistered after acquisition",
-									event.getReference().getUrl()));
-					break;
-				case MODIFIED:
-					logger.info(String.format(
-							"service [%s] has been modified after acquisition",
-							event.getReference().getUrl()));
-					break;
-				}
-			}
-		};
-	}
-
-	protected void processConfigurations(Map<String, String> propertySubstitions) {
-		Map<File, File> processedConfigurations = new HashMap<>();
-		File tempDir;
-		try {
-			tempDir = File.createTempFile("autoconfigure", "dir");
-		} catch (IOException e) {
-			logger.log(Level.SEVERE, "Unable to create a temporary directory",
-					e);
-			throw new IllegalStateException(
-					"Unable to create a temporary directory", e);
+			properties.put(String.valueOf(entry.getKey()),
+					String.valueOf(entry.getValue()));
 		}
 
-		Utils.initializeDirectory(tempDir);
+		// Add any substitutions supplied
+		properties.putAll(substitutions);
 
-		try {
-			for (File configFile : configurations) {
-				if (!configFile.exists()) {
-					logger.info(String.format(
-							"missing configuration file [%s]",
-							configFile.getAbsolutePath()));
-					break;
-				}
-				processedConfigurations.put(configFile,
-						process(tempDir, configFile, propertySubstitions));
-			}
-		} finally {
-			Utils.remove(tempDir);
+		// Add the bound host:port of this service
+		properties.put(hostVariable, bound.get().getAddress().toString());
+		properties.put(portVariable, Integer.toString(bound.get().getPort()));
+
+		// Add all the substitutions for the service collections
+		for (ServiceCollection serviceCollection : serviceCollections.values()) {
+			properties.put(serviceCollection.variable,
+					serviceCollection.resolve());
 		}
-		for (Map.Entry<File, File> entry : processedConfigurations.entrySet()) {
-			try {
-				Utils.copy(entry.getKey(), entry.getValue());
-				logger.info(String.format(
-						"copied processed configuration file []", entry
-								.getValue().getAbsolutePath()));
-			} catch (IOException e) {
-				String msg = String
-						.format("Cannot copy processed configuration [%s] to original location [%s]",
-								entry.getValue().getAbsolutePath(), entry
-										.getKey().getAbsolutePath());
-				logger.log(Level.SEVERE, msg, e);
-				throw new IllegalStateException(msg, e);
-			}
+
+		// Add all the substitutions for the services
+		for (Service service : services.values()) {
+			properties.put(service.variable, service.resolve());
 		}
+		logger.info(String
+				.format("Using property substitions [%s]", properties));
+		return properties;
 	}
 
 	/**
@@ -529,34 +380,194 @@ public class ConfigureMe {
 		return destination;
 	}
 
-	protected Map<String, String> getPropertySubstitutions() {
-		Map<String, String> properties = new HashMap<>();
-		// First the system properties
-		for (Map.Entry<Object, Object> entry : System.getProperties()
+	protected void processConfigurations(Map<String, String> propertySubstitions) {
+		Map<File, File> processedConfigurations = new HashMap<>();
+		File tempDir;
+		try {
+			tempDir = File.createTempFile("autoconfigure", "dir");
+		} catch (IOException e) {
+			logger.log(Level.SEVERE, "Unable to create a temporary directory",
+					e);
+			throw new IllegalStateException(
+					"Unable to create a temporary directory", e);
+		}
+
+		Utils.initializeDirectory(tempDir);
+
+		try {
+			for (File configFile : configurations) {
+				if (!configFile.exists()) {
+					logger.info(String.format(
+							"missing configuration file [%s]",
+							configFile.getAbsolutePath()));
+					break;
+				}
+				processedConfigurations.put(configFile,
+						process(tempDir, configFile, propertySubstitions));
+			}
+		} finally {
+			Utils.remove(tempDir);
+		}
+		for (Map.Entry<File, File> entry : processedConfigurations.entrySet()) {
+			try {
+				Utils.copy(entry.getKey(), entry.getValue());
+				logger.info(String.format(
+						"copied processed configuration file []", entry
+								.getValue().getAbsolutePath()));
+			} catch (IOException e) {
+				String msg = String
+						.format("Cannot copy processed configuration [%s] to original location [%s]",
+								entry.getValue().getAbsolutePath(), entry
+										.getKey().getAbsolutePath());
+				logger.log(Level.SEVERE, msg, e);
+				throw new IllegalStateException(msg, e);
+			}
+		}
+	}
+
+	protected void registerListeners() {
+		registerServiceCollectionListeners();
+		registerServiceListeners();
+	}
+
+	protected void registerService() {
+		allocatePort();
+		String service = String.format(serviceFormat, bound.get().getAddress(),
+				bound.get().getPort());
+		try {
+			ServiceURL url = new ServiceURL(service);
+			logger.info(String.format(
+					"Registering this service as [%s] with properties [%s]",
+					url, serviceProperties));
+			discovery.register(url, serviceProperties);
+		} catch (MalformedURLException e) {
+			String msg = String.format("Invalid syntax for service URL [%s]",
+					service);
+			logger.log(Level.SEVERE, msg, e);
+			throw new IllegalArgumentException(msg, e);
+		}
+	}
+
+	protected void registerServiceCollectionListeners() {
+		for (Map.Entry<ServiceListener, ServiceCollection> entry : serviceCollections
 				.entrySet()) {
-			properties.put(String.valueOf(entry.getKey()),
-					String.valueOf(entry.getValue()));
+			ServiceCollection service = entry.getValue();
+			try {
+				logger.info(String.format(
+						"Registering listener for service collection [%s]",
+						service));
+				discovery.addServiceListener(entry.getKey(),
+						service.constructFilter());
+			} catch (InvalidSyntaxException e) {
+				String msg = String
+						.format("Invalid syntax for discovered service collection [%s]",
+								service);
+				logger.log(Level.SEVERE, msg, e);
+				throw new IllegalArgumentException(msg, e);
+			}
 		}
+	}
 
-		// Add any substitutions supplied
-		properties.putAll(substitutions);
-
-		// Add the bound host:port of this service
-		properties.put(hostVariable, bound.get().getAddress().toString());
-		properties.put(portVariable, Integer.toString(bound.get().getPort()));
-
-		// Add all the substitutions for the service collections
-		for (ServiceCollection serviceCollection : serviceCollections.values()) {
-			properties.put(serviceCollection.variable,
-					serviceCollection.resolve());
+	protected void registerServiceListeners() {
+		for (Map.Entry<ServiceListener, Service> entry : services.entrySet()) {
+			Service service = entry.getValue();
+			try {
+				logger.info(String.format(
+						"Registering listener for service [%s]", service));
+				discovery.addServiceListener(entry.getKey(),
+						service.constructFilter());
+			} catch (InvalidSyntaxException e) {
+				String msg = String.format(
+						"Invalid syntax for discovered service [%s]", service);
+				logger.log(Level.SEVERE, msg, e);
+				throw new IllegalArgumentException(msg, e);
+			}
 		}
+	}
 
-		// Add all the substitutions for the services
-		for (Service service : services.values()) {
-			properties.put(service.variable, service.resolve());
-		}
-		logger.info(String
-				.format("Using property substitions [%s]", properties));
-		return properties;
+	protected ServiceListener serviceCollectionListener() {
+		return new ServiceListener() {
+			@Override
+			public void serviceChanged(ServiceEvent event) {
+				ServiceReference reference = event.getReference();
+				switch (event.getType()) {
+				case REGISTERED:
+					ServiceCollection serviceCollection = serviceCollections
+							.get(this);
+					if (serviceCollection == null) {
+						String msg = String.format(
+								"No existing listener matching [%s]",
+								reference.getUrl());
+						logger.severe(msg);
+						throw new IllegalStateException(msg);
+					}
+					discover(reference, serviceCollection);
+					break;
+				case UNREGISTERED:
+					String msg = String
+							.format("service [%s] has been unregistered after acquisition",
+									reference.getUrl());
+					logger.info(msg);
+					break;
+				case MODIFIED:
+					logger.info(String.format(
+							"service [%s] has been modified after acquisition",
+							reference.getUrl()));
+					break;
+				}
+			}
+		};
+	}
+
+	protected ServiceListener serviceListener() {
+		return new ServiceListener() {
+			@Override
+			public void serviceChanged(ServiceEvent event) {
+				ServiceReference reference = event.getReference();
+				switch (event.getType()) {
+				case REGISTERED:
+					Service service = services.get(this);
+					if (service == null) {
+						String msg = String.format(
+								"No existing listener matching [%s]",
+								reference.getUrl());
+						logger.severe(msg);
+						throw new IllegalStateException(msg);
+					}
+					discover(reference, service);
+					break;
+				case UNREGISTERED:
+					logger.info(String
+							.format("service [%s] has been unregistered after acquisition",
+									reference.getUrl()));
+					break;
+				case MODIFIED:
+					logger.info(String.format(
+							"service [%s] has been modified after acquisition",
+							reference.getUrl()));
+					break;
+				}
+			}
+		};
+	}
+
+	protected Runnable successAction(final Runnable success,
+			final Runnable failure) {
+		return new Runnable() {
+			@Override
+			public void run() {
+				logger.info("All services have been discovered");
+				try {
+					processConfigurations(getPropertySubstitutions());
+				} catch (Throwable e) {
+					logger.log(Level.SEVERE, "Error processing configurations",
+							e);
+					failure.run();
+					return;
+				}
+				logger.info("Auto configuration successfully completed");
+				success.run();
+			}
+		};
 	}
 }
