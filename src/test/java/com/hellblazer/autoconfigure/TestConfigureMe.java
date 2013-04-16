@@ -53,7 +53,7 @@ public class TestConfigureMe {
 		List<File> configurations = new ArrayList<>();
 		Map<String, String> substitutions = new HashMap<>();
 		ConfigureMe configureMe = new ConfigureMe(serviceFormat, "host",
-				"port", "en0", serviceProperties, discovery,
+				"port", "en0", 0, serviceProperties, discovery,
 				serviceDefinitions, serviceCollectionDefinitions,
 				configurations, substitutions);
 		final AtomicBoolean succeeded = new AtomicBoolean();

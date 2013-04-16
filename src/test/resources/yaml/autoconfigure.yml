@@ -2,6 +2,7 @@ serviceUrl: "service:zookeeper:%s:%s"
 hostVariable: myHost
 portVariable: myPort
 networkInterface: en0
+addressIndex: 0
 serviceProperties:
     id: 1
     updateGroup: B

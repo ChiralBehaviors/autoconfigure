@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -58,6 +59,7 @@ public class ConfigureMe {
 	private static final Logger logger = Logger.getLogger(ConfigureMe.class
 			.getCanonicalName());
 
+	private final int addressIndex;
 	private final AtomicReference<InetSocketAddress> bound = new AtomicReference<>();
 	private final List<File> configurations;
 	private final ServiceScope discovery;
@@ -81,8 +83,9 @@ public class ConfigureMe {
 	 */
 	public ConfigureMe(AutoConfiguration config) throws SocketException {
 		this(config.serviceUrl, config.hostVariable, config.portVariable,
-				config.networkInterface, config.serviceProperties,
-				new GossipScope(config.gossip.construct()), config.services,
+				config.networkInterface, config.addressIndex,
+				config.serviceProperties, new GossipScope(
+						config.gossip.construct()), config.services,
 				config.serviceCollections, config.configurations,
 				config.substitutions);
 	}
@@ -101,6 +104,9 @@ public class ConfigureMe {
 	 *            this service in the configuation files
 	 * @param networkInterface
 	 *            - the network interface to use to bind this service
+	 * @param addressIndex
+	 *            - the index of the address to use that are bound to the
+	 *            network interface
 	 * @param serviceProperties
 	 *            - the properties used to register this service in the
 	 *            discovery scope
@@ -118,7 +124,7 @@ public class ConfigureMe {
 	 *            the configuration files
 	 */
 	public ConfigureMe(String serviceFormat, String hostVariable,
-			String portVariable, String networkInterface,
+			String portVariable, String networkInterface, int addressIndex,
 			Map<String, String> serviceProperties, ServiceScope discovery,
 			List<Service> serviceDefinitions,
 			List<ServiceCollection> serviceCollectionDefinitions,
@@ -127,6 +133,7 @@ public class ConfigureMe {
 		this.hostVariable = hostVariable;
 		this.portVariable = portVariable;
 		this.networkInterface = networkInterface;
+		this.addressIndex = addressIndex;
 		this.serviceProperties = serviceProperties;
 		this.discovery = discovery;
 		this.configurations = configurations;
@@ -154,16 +161,23 @@ public class ConfigureMe {
 	 */
 	public void configure(Runnable success, Runnable failure, long timeout,
 			TimeUnit unit) {
+		logger.info("Beginning auto configuration process");
 		Runnable successAction = successAction(success, failure);
 		int cardinality = getCardinality();
 		if (!rendezvous.compareAndSet(null, new Rendezvous(cardinality,
 				successAction, failureAction(failure)))) {
 			throw new IllegalStateException("System is already configuring!");
 		}
+		try {
+			registerService();
+		} catch (Throwable e) {
+			logger.log(Level.SEVERE, "Unable to register this service!", e);
+			failure.run();
+			return;
+		}
 
-		registerService();
-
-		if (cardinality == 0) { // no services required
+		if (cardinality == 0) { 
+			// no services required
 			successAction.run();
 			return;
 		}
@@ -180,7 +194,7 @@ public class ConfigureMe {
 			registerListeners();
 			registerService();
 		} catch (Throwable e) {
-			logger.log(Level.SEVERE, "Error configuring", e);
+			logger.log(Level.SEVERE, "Error registering service listeners", e);
 			failure.run();
 		}
 	}
@@ -218,25 +232,44 @@ public class ConfigureMe {
 		logger.info(String.format("Network interface [%s] is up",
 				iface.getDisplayName()));
 		Enumeration<InetAddress> interfaceAddresses = iface.getInetAddresses();
-		if (!interfaceAddresses.hasMoreElements()) {
+		InetAddress raw = null;
+		for (int i = 0; i <= addressIndex; i++) {
+			if (!interfaceAddresses.hasMoreElements()) {
+				String msg = String
+						.format("Unable to find any network address for interface[%s] {%s}",
+								networkInterface, iface.getDisplayName());
+				logger.severe(msg);
+				throw new IllegalStateException(msg);
+			}
+			raw = interfaceAddresses.nextElement();
+		}
+		if (raw == null) {
 			String msg = String
 					.format("Unable to find any network address for interface[%s] {%s}",
 							networkInterface, iface.getDisplayName());
 			logger.severe(msg);
 			throw new IllegalStateException(msg);
 		}
-		InetAddress address = interfaceAddresses.nextElement();
+		InetAddress address;
+		try {
+			address = InetAddress.getByName(raw.getCanonicalHostName());
+		} catch (UnknownHostException e) {
+			String msg = String
+					.format("Unable to resolve network address [%s] for interface[%s] {%s}",
+							raw, networkInterface, iface.getDisplayName());
+			logger.log(Level.SEVERE, msg, e);
+			throw new IllegalStateException(msg, e);
+		}
 		int port = Utils.allocatePort(address);
 		if (port <= 0) {
 			String msg = String.format(
-					"Unable to allocate port on address [%s]",
-					address.getCanonicalHostName());
+					"Unable to allocate port on address [%s]", address);
 			logger.severe(msg);
 			throw new IllegalStateException(msg);
 		}
-		logger.info(String.format("Binding this service to [%s:%s]",
-				address.getCanonicalHostName(), port));
-		bound.set(new InetSocketAddress(address.getCanonicalHostName(), port));
+		InetSocketAddress boundAddress = new InetSocketAddress(address, port);
+		logger.info(String.format("Binding this service to [%s]", boundAddress));
+		bound.set(boundAddress);
 	}
 
 	protected void discover(ServiceReference reference, Service service) {

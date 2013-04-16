@@ -37,6 +37,8 @@ public class AutoConfiguration {
 	@JsonProperty
 	public String networkInterface = "eth0";
 	@JsonProperty
+	public int addressIndex = 0;
+	@JsonProperty
 	public String portVariable = "myPortNumber";
 	@JsonProperty
 	public List<ServiceCollection> serviceCollections = new ArrayList<>();
