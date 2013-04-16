@@ -15,10 +15,13 @@
 package com.hellblazer.autoconfigure;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hellblazer.slp.ServiceReference;
+import com.hellblazer.slp.ServiceScope;
 import com.hellblazer.slp.ServiceURL;
 
 /**
@@ -38,6 +41,8 @@ public class Service {
 	public String variable = "service";
 	@JsonProperty
 	public List<String> properties = new ArrayList<>();
+	@JsonProperty
+	public Map<String, String> serviceProperties = new HashMap<>();
 
 	public ServiceReference getDiscovered() {
 		return discovered;
@@ -59,5 +64,39 @@ public class Service {
 			values.add(discovered.getProperties().get(property));
 		}
 		return String.format(format, values.toArray());
+	}
+
+	public String toString() {
+		return String.format("Service [%s] properties [%s]", service,
+				serviceProperties);
+	}
+
+	/**
+	 * @return the query filter for the service collection
+	 */
+	public String constructFilter() {
+		StringBuilder builder = new StringBuilder();
+		builder.append('(');
+		if (serviceProperties.size() != 0) {
+			builder.append(" &(");
+		}
+		builder.append(String.format("%s=%s",
+				ServiceScope.SERVICE_REGISTRATION, service));
+		if (serviceProperties.size() != 0) {
+			builder.append(")");
+		}
+		for (Map.Entry<String, String> entry : serviceProperties.entrySet()) {
+			builder.append(String.format(" (%s=%s) ", entry.getKey(),
+					entry.getValue()));
+		}
+		builder.append(')');
+		return builder.toString();
+	}
+
+	/**
+	 * @return true if the service has been discovered
+	 */
+	public boolean isDiscovered() {
+		return discovered != null;
 	}
 }
