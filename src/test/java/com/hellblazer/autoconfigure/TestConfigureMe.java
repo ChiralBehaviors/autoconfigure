@@ -14,6 +14,12 @@
  */
 package com.hellblazer.autoconfigure;
 
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,8 +33,12 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import com.hellblazer.slp.ServiceListener;
+import com.hellblazer.slp.ServiceReference;
 import com.hellblazer.slp.ServiceScope;
-import static org.junit.Assert.*;
+import com.hellblazer.slp.ServiceURL;
+import com.hellblazer.utils.Condition;
+import com.hellblazer.utils.Utils;
 
 /**
  * @author hhildebrand
@@ -57,19 +67,95 @@ public class TestConfigureMe {
 				serviceDefinitions, serviceCollectionDefinitions,
 				configurations, substitutions);
 		final AtomicBoolean succeeded = new AtomicBoolean();
+		final AtomicBoolean completed = new AtomicBoolean();
 		Runnable success = new Runnable() {
 			@Override
 			public void run() {
 				succeeded.set(true);
+				completed.set(true);
 			}
 		};
 		Runnable failure = new Runnable() {
 			@Override
 			public void run() {
 				succeeded.set(false);
+				completed.set(true);
 			}
 		};
 		configureMe.configure(success, failure, 10, TimeUnit.MILLISECONDS);
-		assertTrue(succeeded.get());
+		assertTrue("configuration did not complete",
+				Utils.waitForCondition(1000, new Condition() {
+					@Override
+					public boolean isTrue() {
+						return completed.get();
+					}
+				}));
+		assertTrue("configuration did not succeed", succeeded.get());
+	}
+
+	@Test
+	public void testServiceRegistration() throws Exception {
+		String serviceFormat = "service:test:tcp://%s:%s";
+		Map<String, String> serviceProperties = new HashMap<String, String>();
+		Service service = new Service();
+		service.service = "service:testService:tcp";
+		List<Service> serviceDefinitions = new ArrayList<>();
+		serviceDefinitions.add(service);
+		ServiceCollection serviceCollection = new ServiceCollection();
+		serviceCollection.service = "service:testServiceCollection:tcp";
+		serviceCollection.cardinality = 1;
+		List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
+		serviceCollectionDefinitions.add(serviceCollection);
+		List<File> configurations = new ArrayList<>();
+		Map<String, String> substitutions = new HashMap<>();
+		ConfigureMe configureMe = new ConfigureMe(serviceFormat, "host",
+				"port", "en0", 0, serviceProperties, discovery,
+				serviceDefinitions, serviceCollectionDefinitions,
+				configurations, substitutions);
+		final AtomicBoolean completed = new AtomicBoolean();
+		final AtomicBoolean succeeded = new AtomicBoolean();
+		Runnable success = new Runnable() {
+			@Override
+			public void run() {
+				succeeded.set(true);
+				completed.set(true);
+			}
+		};
+		Runnable failure = new Runnable() {
+			@Override
+			public void run() {
+				succeeded.set(false);
+				completed.set(true);
+			}
+		};
+		configureMe.configure(success, failure, 100, TimeUnit.MILLISECONDS);
+		ServiceReference serviceRef = mock(ServiceReference.class);
+		ServiceURL serviceUrl = mock(ServiceURL.class);
+		when(serviceRef.getUrl()).thenReturn(serviceUrl);
+		when(serviceUrl.getHost()).thenReturn("example.com");
+		when(serviceUrl.getPort()).thenReturn(1);
+		configureMe.discover(serviceRef, service);
+		ServiceReference serviceCollectionRef = mock(ServiceReference.class);
+		ServiceURL serviceCollectionUrl = mock(ServiceURL.class);
+		when(serviceCollectionUrl.getHost()).thenReturn("example.com");
+		when(serviceCollectionUrl.getPort()).thenReturn(2);
+		when(serviceCollectionRef.getUrl()).thenReturn(serviceCollectionUrl);
+		configureMe.discover(serviceCollectionRef, serviceCollection);
+		assertTrue("configuration did not complete",
+				Utils.waitForCondition(1000, new Condition() {
+					@Override
+					public boolean isTrue() {
+						return completed.get();
+					}
+				}));
+		assertTrue("configuration not successful", succeeded.get());
+		verify(discovery).addServiceListener(
+				isA(ServiceListener.class),
+				eq(ConfigureMe.constructFilter(service.service,
+						service.serviceProperties)));
+		verify(discovery).addServiceListener(
+				isA(ServiceListener.class),
+				eq(ConfigureMe.constructFilter(serviceCollection.service,
+						serviceCollection.serviceProperties)));
 	}
 }

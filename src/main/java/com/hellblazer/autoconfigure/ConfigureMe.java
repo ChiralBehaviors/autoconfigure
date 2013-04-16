@@ -31,6 +31,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -58,6 +59,26 @@ import com.hellblazer.utils.Utils;
 public class ConfigureMe {
 	private static final Logger logger = Logger.getLogger(ConfigureMe.class
 			.getCanonicalName());
+
+	public static String constructFilter(String service,
+			Map<String, String> properties) {
+		StringBuilder builder = new StringBuilder();
+		builder.append('(');
+		if (properties.size() != 0) {
+			builder.append(" &(");
+		}
+		builder.append(String.format("%s=%s",
+				ServiceScope.SERVICE_REGISTRATION, service));
+		if (properties.size() != 0) {
+			builder.append(")");
+		}
+		for (Map.Entry<String, String> entry : properties.entrySet()) {
+			builder.append(String.format(" (%s=%s) ", entry.getKey(),
+					entry.getValue()));
+		}
+		builder.append(')');
+		return builder.toString();
+	}
 
 	private final int addressIndex;
 	private final AtomicReference<InetSocketAddress> bound = new AtomicReference<>();
@@ -176,7 +197,7 @@ public class ConfigureMe {
 			return;
 		}
 
-		if (cardinality == 0) { 
+		if (cardinality == 0) {
 			// no services required
 			successAction.run();
 			return;
@@ -275,7 +296,16 @@ public class ConfigureMe {
 	protected void discover(ServiceReference reference, Service service) {
 		logger.info(String.format("discovered [%s] for service [%s]",
 				reference.getUrl(), service));
+		if (service.isDiscovered()) {
+			logger.warning(String
+					.format("Service [%s] has already been discovered!"));
+		}
 		service.discover(reference);
+		try {
+			rendezvous.get().meet();
+		} catch (BrokenBarrierException e) {
+			logger.finest("Barrier already broken");
+		}
 	}
 
 	protected void discover(ServiceReference reference,
@@ -284,6 +314,11 @@ public class ConfigureMe {
 				"discovered [%s] for service collection [%s]",
 				reference.getUrl(), serviceCollection));
 		serviceCollection.discover(reference);
+		try {
+			rendezvous.get().meet();
+		} catch (BrokenBarrierException e) {
+			logger.finest("Barrier already broken");
+		}
 	}
 
 	protected Runnable failureAction(final Runnable failure) {

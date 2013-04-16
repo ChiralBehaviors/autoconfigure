@@ -21,7 +21,6 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hellblazer.slp.ServiceReference;
-import com.hellblazer.slp.ServiceScope;
 import com.hellblazer.slp.ServiceURL;
 
 /**
@@ -78,30 +77,15 @@ public class ServiceCollection {
 	}
 
 	public String toString() {
-		return String.format("Service Collection [%s] properties [%s]",
-				service, serviceProperties);
+		return String.format("Service Collection [%s] [%s] properties %s",
+				cardinality, service, serviceProperties);
 	}
 
 	/**
 	 * @return the query filter for the service collection
 	 */
 	public String constructFilter() {
-		StringBuilder builder = new StringBuilder();
-		builder.append('(');
-		if (serviceProperties.size() != 0) {
-			builder.append(" &(");
-		}
-		builder.append(String.format("%s=%s",
-				ServiceScope.SERVICE_REGISTRATION, service));
-		if (serviceProperties.size() != 0) {
-			builder.append(")");
-		}
-		for (Map.Entry<String, String> entry : serviceProperties.entrySet()) {
-			builder.append(String.format(" (%s=%s) ", entry.getKey(),
-					entry.getValue()));
-		}
-		builder.append(')');
-		return builder.toString();
+		return ConfigureMe.constructFilter(service, serviceProperties);
 	}
 
 	/**
