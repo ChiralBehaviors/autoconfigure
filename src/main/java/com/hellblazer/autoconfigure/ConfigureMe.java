@@ -449,7 +449,7 @@ public class ConfigureMe {
 				logger.log(Level.SEVERE, msg, e);
 				throw new IllegalStateException(msg, e);
 			}
-			logger.info(String.format("processed configuration file []",
+			logger.info(String.format("processed configuration file [%s]",
 					configFile.getAbsolutePath()));
 		} finally {
 			if (os != null) {
@@ -507,7 +507,7 @@ public class ConfigureMe {
 			try {
 				Utils.copy(entry.getKey(), entry.getValue());
 				logger.info(String.format(
-						"copied processed configuration file []", entry
+						"copied processed configuration file [%s]", entry
 								.getValue().getAbsolutePath()));
 			} catch (IOException e) {
 				String msg = String
@@ -664,5 +664,9 @@ public class ConfigureMe {
 				success.run();
 			}
 		};
+	}
+
+	protected InetSocketAddress getBound() {
+		return bound.get();
 	}
 }
