@@ -31,13 +31,13 @@ public class Service {
 	private volatile ServiceReference discovered;
 
 	@JsonProperty
-	public final String service = "service:someType:someProtocol";
+	public String service = "service:someType:someProtocol";
 	@JsonProperty
-	public final String format = "%s:%s";
+	public String format = "%s:%s";
 	@JsonProperty
-	public final String variable = "service";
+	public String variable = "service";
 	@JsonProperty
-	public final List<String> properties = new ArrayList<>();
+	public List<String> properties = new ArrayList<>();
 
 	public ServiceReference getDiscovered() {
 		return discovered;

@@ -51,9 +51,12 @@ public class TestAutoConfiguration {
 		assertEquals(":", serviceCollection.separator);
 		assertEquals("service:iron:man", serviceCollection.service);
 		assertEquals(5, serviceCollection.cardinality);
-		
+
 		List<Service> services = config.services;
 		assertNotNull(services);
 		assertEquals(1, services.size());
+		Service service = services.get(0);
+		assertEquals("%s|%s", service.format);
+		assertEquals("service:thor:rmi", service.service);
 	}
 }

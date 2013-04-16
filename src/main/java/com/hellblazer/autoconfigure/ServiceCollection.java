@@ -29,19 +29,18 @@ import com.hellblazer.slp.ServiceURL;
  */
 public class ServiceCollection {
 	@JsonProperty
-	public final int cardinality = 0;
-
+	public int cardinality = 0;
 	@JsonProperty
-	public final String format = "%s:%s";
+	public String format = "%s:%s";
 	@JsonProperty
-	public final List<String> properties = new ArrayList<>();
+	public List<String> properties = new ArrayList<>();
 	@JsonProperty
-	public final String separator = ",";
+	public String separator = ",";
 	@JsonProperty
-	public final String service = "service:someType:someProtocol";
+	public String service = "service:someType:someProtocol";
 	@JsonProperty
 	public final String variable = "services";
-	private final List<ServiceReference> discovered = new ArrayList<>();
+	private List<ServiceReference> discovered = new ArrayList<>();
 
 	public void discover(ServiceReference reference) {
 		discovered.add(reference);
