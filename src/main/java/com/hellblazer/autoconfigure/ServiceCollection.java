@@ -43,7 +43,7 @@ public class ServiceCollection {
 	@JsonProperty
 	public Map<String, String> serviceProperties = new HashMap<>();
 	@JsonProperty
-	public final String variable = "services";
+	public String variable = "services";
 	private List<ServiceReference> discovered = new ArrayList<>();
 
 	public void discover(ServiceReference reference) {

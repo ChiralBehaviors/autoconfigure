@@ -375,7 +375,7 @@ public class ConfigureMe {
 		properties.putAll(substitutions);
 
 		// Add the bound host:port of this service
-		properties.put(hostVariable, bound.get().getAddress().toString());
+		properties.put(hostVariable, bound.get().getHostName());
 		properties.put(portVariable, Integer.toString(bound.get().getPort()));
 
 		// Add all the substitutions for the service collections
@@ -408,8 +408,8 @@ public class ConfigureMe {
 			Map<String, String> propertySubstitutions) {
 		File destination;
 		try {
-			destination = File
-					.createTempFile(configFile.getName(), "processed");
+			destination = File.createTempFile(configFile.getName(),
+					"processed", tempDir);
 		} catch (IOException e) {
 			String msg = String
 					.format("Cannot create temporary file for processing the configuration file [%s]",
@@ -440,7 +440,7 @@ public class ConfigureMe {
 				throw new IllegalStateException(msg, e);
 			}
 			try {
-				Utils.replaceProperties(is, os, serviceProperties);
+				Utils.replaceProperties(is, os, propertySubstitutions);
 			} catch (IOException e) {
 				String msg = String.format(
 						"Error processing the configuration file [%s] > [%s]",
@@ -500,23 +500,24 @@ public class ConfigureMe {
 				processedConfigurations.put(configFile,
 						process(tempDir, configFile, propertySubstitions));
 			}
+			for (Map.Entry<File, File> entry : processedConfigurations
+					.entrySet()) {
+				try {
+					Utils.copy(entry.getValue(), entry.getKey());
+					logger.info(String.format(
+							"copied processed configuration file [%s]", entry
+									.getValue().getAbsolutePath()));
+				} catch (IOException e) {
+					String msg = String
+							.format("Cannot copy processed configuration [%s] to original location [%s]",
+									entry.getValue().getAbsolutePath(), entry
+											.getKey().getAbsolutePath());
+					logger.log(Level.SEVERE, msg, e);
+					throw new IllegalStateException(msg, e);
+				}
+			}
 		} finally {
 			Utils.remove(tempDir);
-		}
-		for (Map.Entry<File, File> entry : processedConfigurations.entrySet()) {
-			try {
-				Utils.copy(entry.getKey(), entry.getValue());
-				logger.info(String.format(
-						"copied processed configuration file [%s]", entry
-								.getValue().getAbsolutePath()));
-			} catch (IOException e) {
-				String msg = String
-						.format("Cannot copy processed configuration [%s] to original location [%s]",
-								entry.getValue().getAbsolutePath(), entry
-										.getKey().getAbsolutePath());
-				logger.log(Level.SEVERE, msg, e);
-				throw new IllegalStateException(msg, e);
-			}
 		}
 	}
 
