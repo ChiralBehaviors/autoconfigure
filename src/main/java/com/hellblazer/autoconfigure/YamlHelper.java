@@ -34,11 +34,11 @@ import com.hellblazer.gossip.configuration.TimeUnitDeserializer;
  */
 public class YamlHelper {
 
-	public static AutoConfiguration fromYaml(InputStream yaml)
+	public static Configuration fromYaml(InputStream yaml)
 			throws JsonParseException, JsonMappingException, IOException {
 		ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 		mapper.registerModule(getModule());
-		return mapper.readValue(yaml, AutoConfiguration.class);
+		return mapper.readValue(yaml, Configuration.class);
 	}
 
 	public static Module getModule() {

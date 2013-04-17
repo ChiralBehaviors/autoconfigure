@@ -28,13 +28,13 @@ import com.hellblazer.gossip.configuration.GossipConfiguration;
  * @author hhildebrand
  * 
  */
-public class TestAutoConfiguration {
+public class TestConfiguration {
 
 	@Test
 	public void configurationTest() throws Exception {
 		InputStream is = getClass().getResourceAsStream(
 				"/yaml/autoconfigure.yml");
-		AutoConfiguration config = YamlHelper.fromYaml(is);
+		Configuration config = YamlHelper.fromYaml(is);
 		assertNotNull(config);
 		GossipConfiguration gossip = config.gossip;
 		assertNotNull(gossip);

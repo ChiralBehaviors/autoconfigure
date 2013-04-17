@@ -20,34 +20,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hellblazer.gossip.configuration.GossipConfiguration;
 
 /**
  * @author hhildebrand
  * 
  */
-public class AutoConfiguration {
-	@JsonProperty
+public class Configuration {
 	public List<File> configurations = new ArrayList<>();
-	@JsonProperty
 	public GossipConfiguration gossip = new GossipConfiguration();
-	@JsonProperty
 	public String hostVariable = "myHostName";
-	@JsonProperty
 	public String networkInterface = "eth0";
-	@JsonProperty
 	public int addressIndex = 0;
-	@JsonProperty
 	public String portVariable = "myPortNumber";
-	@JsonProperty
 	public List<ServiceCollection> serviceCollections = new ArrayList<>();
-	@JsonProperty
 	public String serviceUrl = "service:someType:http:%s:%s/myURI";
-	@JsonProperty
 	public Map<String, String> serviceProperties = new HashMap<>();
-	@JsonProperty
 	public List<Service> services = new ArrayList<>();
-	@JsonProperty
 	public Map<String, String> substitutions = new HashMap<>();
+	public List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 }

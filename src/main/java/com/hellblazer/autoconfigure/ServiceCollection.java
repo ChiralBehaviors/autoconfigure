@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hellblazer.slp.ServiceReference;
 import com.hellblazer.slp.ServiceURL;
 
@@ -30,19 +29,12 @@ import com.hellblazer.slp.ServiceURL;
  * 
  */
 public class ServiceCollection {
-	@JsonProperty
 	public int cardinality = 0;
-	@JsonProperty
 	public String format = "%s:%s";
-	@JsonProperty
 	public List<String> properties = new ArrayList<>();
-	@JsonProperty
 	public String separator = ",";
-	@JsonProperty
 	public String service = "service:someType:someProtocol";
-	@JsonProperty
 	public Map<String, String> serviceProperties = new HashMap<>();
-	@JsonProperty
 	public String variable = "services";
 	private List<ServiceReference> discovered = new ArrayList<>();
 
@@ -85,7 +77,7 @@ public class ServiceCollection {
 	 * @return the query filter for the service collection
 	 */
 	public String constructFilter() {
-		return ConfigureMe.constructFilter(service, serviceProperties);
+		return AutoConfigure.constructFilter(service, serviceProperties);
 	}
 
 	/**

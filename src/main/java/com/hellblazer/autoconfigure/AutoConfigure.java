@@ -31,6 +31,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -56,8 +57,8 @@ import com.hellblazer.utils.Utils;
  * @author hhildebrand
  * 
  */
-public class ConfigureMe {
-	private static final Logger logger = Logger.getLogger(ConfigureMe.class
+public class AutoConfigure {
+	private static final Logger logger = Logger.getLogger(AutoConfigure.class
 			.getCanonicalName());
 
 	public static String constructFilter(String service,
@@ -91,8 +92,10 @@ public class ConfigureMe {
 	private final Map<ServiceListener, ServiceCollection> serviceCollections = new HashMap<>();
 	private final String serviceFormat;
 	private final Map<String, String> serviceProperties;
+	private final AtomicReference<UUID> serviceRegistration = new AtomicReference<>();
 	private final Map<ServiceListener, Service> services = new HashMap<>();
 	private final Map<String, String> substitutions;
+	private final List<UniqueDirectory> uniqueDirectories;
 
 	/**
 	 * Construct an instance from the configuration POJO
@@ -102,13 +105,13 @@ public class ConfigureMe {
 	 * @throws SocketException
 	 *             - if the discovery service cannot be constructed
 	 */
-	public ConfigureMe(AutoConfiguration config) throws SocketException {
+	public AutoConfigure(Configuration config) throws SocketException {
 		this(config.serviceUrl, config.hostVariable, config.portVariable,
 				config.networkInterface, config.addressIndex,
 				config.serviceProperties, new GossipScope(
-						config.gossip.construct()), config.services,
+						config.gossip.construct()).start(), config.services,
 				config.serviceCollections, config.configurations,
-				config.substitutions);
+				config.substitutions, config.uniqueDirectories);
 	}
 
 	/**
@@ -144,12 +147,13 @@ public class ConfigureMe {
 	 *            - an additional list of properties that will be substituted in
 	 *            the configuration files
 	 */
-	public ConfigureMe(String serviceFormat, String hostVariable,
+	public AutoConfigure(String serviceFormat, String hostVariable,
 			String portVariable, String networkInterface, int addressIndex,
 			Map<String, String> serviceProperties, ServiceScope discovery,
 			List<Service> serviceDefinitions,
 			List<ServiceCollection> serviceCollectionDefinitions,
-			List<File> configurations, Map<String, String> substitutions) {
+			List<File> configurations, Map<String, String> substitutions,
+			List<UniqueDirectory> uniqueDirectories) {
 		this.serviceFormat = serviceFormat;
 		this.hostVariable = hostVariable;
 		this.portVariable = portVariable;
@@ -159,6 +163,7 @@ public class ConfigureMe {
 		this.discovery = discovery;
 		this.configurations = configurations;
 		this.substitutions = substitutions;
+		this.uniqueDirectories = uniqueDirectories;
 		for (Service service : serviceDefinitions) {
 			services.put(serviceListener(), service);
 		}
@@ -351,6 +356,10 @@ public class ConfigureMe {
 		};
 	}
 
+	protected InetSocketAddress getBound() {
+		return bound.get();
+	}
+
 	protected int getCardinality() {
 		int cardinality = 0;
 		cardinality += services.size();
@@ -362,7 +371,7 @@ public class ConfigureMe {
 		return cardinality;
 	}
 
-	protected Map<String, String> getPropertySubstitutions() {
+	protected Map<String, String> gatherPropertySubstitutions() {
 		Map<String, String> properties = new HashMap<>();
 		// First the system properties
 		for (Map.Entry<Object, Object> entry : System.getProperties()
@@ -387,6 +396,18 @@ public class ConfigureMe {
 		// Add all the substitutions for the services
 		for (Service service : services.values()) {
 			properties.put(service.variable, service.resolve());
+		}
+
+		// Resolve all unique directories
+		for (UniqueDirectory uDir : uniqueDirectories) {
+			try {
+				properties.put(uDir.variable, uDir.resolve().getAbsolutePath());
+			} catch (IOException e) {
+				String msg = String.format(
+						"Cannot create unique directory [%s]", uDir);
+				logger.log(Level.SEVERE, msg, e);
+				throw new IllegalStateException(msg, e);
+			}
 		}
 		logger.info(String
 				.format("Using property substitions [%s]", properties));
@@ -417,69 +438,49 @@ public class ConfigureMe {
 			logger.log(Level.SEVERE, msg, e);
 			throw new IllegalStateException(msg, e);
 		}
-		InputStream is = null;
-		OutputStream os = null;
-		try {
-			try {
-				is = new FileInputStream(configFile);
-			} catch (FileNotFoundException e) {
-				String msg = String.format(
-						"Cannot open configuration file [%s] for processing",
-						configFile.getAbsolutePath());
-				logger.log(Level.SEVERE, msg, e);
-				throw new IllegalStateException(msg, e);
-			}
-			try {
-				os = new FileOutputStream(destination);
-			} catch (FileNotFoundException e) {
-				String msg = String
-						.format("Cannot open temporary file [%s] for processing the configuration file [%s] for processing",
-								destination.getAbsolutePath(),
-								configFile.getAbsolutePath());
-				logger.log(Level.SEVERE, msg, e);
-				throw new IllegalStateException(msg, e);
-			}
-			try {
-				Utils.replaceProperties(is, os, propertySubstitutions);
-			} catch (IOException e) {
-				String msg = String.format(
-						"Error processing the configuration file [%s] > [%s]",
-						configFile.getAbsolutePath(),
-						destination.getAbsolutePath());
-				logger.log(Level.SEVERE, msg, e);
-				throw new IllegalStateException(msg, e);
-			}
+		try (InputStream is = new FileInputStream(configFile);
+				OutputStream os = new FileOutputStream(destination);) {
+			Utils.replaceProperties(is, os, propertySubstitutions);
 			logger.info(String.format("processed configuration file [%s]",
 					configFile.getAbsolutePath()));
-		} finally {
-			if (os != null) {
-				try {
-					os.close();
-				} catch (IOException e) {
-					logger.log(Level.FINEST, String.format(
-							"cannot close processed stream [%s]",
-							destination.getAbsolutePath()));
-				}
-			}
-			if (is != null) {
-				try {
-					is.close();
-				} catch (IOException e) {
-					logger.log(Level.FINEST, String.format(
-							"cannot close configuration file stream [%s]",
-							configFile.getAbsolutePath()));
-				}
-			}
+		} catch (FileNotFoundException e) {
+			String msg = String
+					.format("Cannot open file during configuration processing  [%s] > [%s]",
+							destination.getAbsolutePath(),
+							configFile.getAbsolutePath());
+			logger.log(Level.SEVERE, msg, e);
+			throw new IllegalStateException(msg, e);
+		} catch (IOException e) {
+			String msg = String
+					.format("Error processing the configuration file [%s] > [%s]",
+							configFile.getAbsolutePath(),
+							destination.getAbsolutePath());
+			logger.log(Level.SEVERE, msg, e);
+			throw new IllegalStateException(msg, e);
 		}
 
 		return destination;
+	}
+
+	protected void processConfigurations(File tempDir,
+			Map<File, File> processedConfigurations,
+			Map<String, String> propertySubstitions) {
+		for (File configFile : configurations) {
+			if (!configFile.exists()) {
+				logger.info(String.format("missing configuration file [%s]",
+						configFile.getAbsolutePath()));
+				break;
+			}
+			processedConfigurations.put(configFile,
+					process(tempDir, configFile, propertySubstitions));
+		}
 	}
 
 	protected void processConfigurations(Map<String, String> propertySubstitions) {
 		Map<File, File> processedConfigurations = new HashMap<>();
 		File tempDir;
 		try {
-			tempDir = File.createTempFile("autoconfigure", "dir");
+			tempDir = File.createTempFile("autoconfigure-", ".dir");
 		} catch (IOException e) {
 			logger.log(Level.SEVERE, "Unable to create a temporary directory",
 					e);
@@ -490,32 +491,9 @@ public class ConfigureMe {
 		Utils.initializeDirectory(tempDir);
 
 		try {
-			for (File configFile : configurations) {
-				if (!configFile.exists()) {
-					logger.info(String.format(
-							"missing configuration file [%s]",
-							configFile.getAbsolutePath()));
-					break;
-				}
-				processedConfigurations.put(configFile,
-						process(tempDir, configFile, propertySubstitions));
-			}
-			for (Map.Entry<File, File> entry : processedConfigurations
-					.entrySet()) {
-				try {
-					Utils.copy(entry.getValue(), entry.getKey());
-					logger.info(String.format(
-							"copied processed configuration file [%s]", entry
-									.getValue().getAbsolutePath()));
-				} catch (IOException e) {
-					String msg = String
-							.format("Cannot copy processed configuration [%s] to original location [%s]",
-									entry.getValue().getAbsolutePath(), entry
-											.getKey().getAbsolutePath());
-					logger.log(Level.SEVERE, msg, e);
-					throw new IllegalStateException(msg, e);
-				}
-			}
+			processConfigurations(tempDir, processedConfigurations,
+					propertySubstitions);
+			replaceConfigurations(processedConfigurations);
 		} finally {
 			Utils.remove(tempDir);
 		}
@@ -533,9 +511,9 @@ public class ConfigureMe {
 		try {
 			ServiceURL url = new ServiceURL(service);
 			logger.info(String.format(
-					"Registering this service as [%s] with properties [%s]",
-					url, serviceProperties));
-			discovery.register(url, serviceProperties);
+					"Registering this service as [%s] with properties %s", url,
+					serviceProperties));
+			serviceRegistration.set(discovery.register(url, serviceProperties));
 		} catch (MalformedURLException e) {
 			String msg = String.format("Invalid syntax for service URL [%s]",
 					service);
@@ -550,7 +528,7 @@ public class ConfigureMe {
 			ServiceCollection service = entry.getValue();
 			try {
 				logger.info(String.format(
-						"Registering listener for service collection [%s]",
+						"Registering listener for service collection %s",
 						service));
 				discovery.addServiceListener(entry.getKey(),
 						service.constructFilter());
@@ -577,6 +555,24 @@ public class ConfigureMe {
 						"Invalid syntax for discovered service [%s]", service);
 				logger.log(Level.SEVERE, msg, e);
 				throw new IllegalArgumentException(msg, e);
+			}
+		}
+	}
+
+	protected void replaceConfigurations(Map<File, File> processedConfigurations) {
+		for (Map.Entry<File, File> entry : processedConfigurations.entrySet()) {
+			try {
+				Utils.copy(entry.getValue(), entry.getKey());
+				logger.info(String.format(
+						"copied processed configuration file [%s]", entry
+								.getValue().getAbsolutePath()));
+			} catch (IOException e) {
+				String msg = String
+						.format("Cannot copy processed configuration [%s] to original location [%s]",
+								entry.getValue().getAbsolutePath(), entry
+										.getKey().getAbsolutePath());
+				logger.log(Level.SEVERE, msg, e);
+				throw new IllegalStateException(msg, e);
 			}
 		}
 	}
@@ -620,6 +616,12 @@ public class ConfigureMe {
 			@Override
 			public void serviceChanged(ServiceEvent event) {
 				ServiceReference reference = event.getReference();
+				if (reference.getRegistration().equals(
+						serviceRegistration.get())) {
+					logger.finest(String
+							.format("Ignoring service event for this instance's service"));
+					return;
+				}
 				switch (event.getType()) {
 				case REGISTERED:
 					Service service = services.get(this);
@@ -654,20 +656,26 @@ public class ConfigureMe {
 			public void run() {
 				logger.info("All services have been discovered");
 				try {
-					processConfigurations(getPropertySubstitutions());
+					processConfigurations(gatherPropertySubstitutions());
 				} catch (Throwable e) {
 					logger.log(Level.SEVERE, "Error processing configurations",
 							e);
 					failure.run();
 					return;
 				}
-				logger.info("Auto configuration successfully completed");
-				success.run();
+				logger.info("Auto configuration successfully completed, running success action");
+				try {
+					success.run();
+					logger.info("Success action completed");
+				} catch (Throwable e) {
+					logger.log(
+							Level.SEVERE,
+							"Exception encountered during the running success action",
+							e);
+					logger.info("Running failure action");
+					failure.run();
+				}
 			}
 		};
-	}
-
-	protected InetSocketAddress getBound() {
-		return bound.get();
 	}
 }

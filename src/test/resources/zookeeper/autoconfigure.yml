@@ -1,0 +1,23 @@
+serviceUrl: "service:zookeeper:tcp://%s:%s"
+hostVariable: host
+portVariable: connect.port
+networkInterface: en0
+addressIndex: 0
+
+uniqueDirectories:
+  - base: ${test.dir}
+  - prefix: data-
+  - suffix: .dir
+  - variable: data.directory
+
+gossip:
+    seeds: 
+        - ${gossip.seed.host}:${gossip.seed.port}
+        
+services:
+  - format: "%s:%s"
+    service: "service:zookeeper:*"
+    variable: cohort
+
+configurations:
+  - zoo.cfg

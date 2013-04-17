@@ -3,6 +3,13 @@ hostVariable: myHost
 portVariable: myPort
 networkInterface: en0
 addressIndex: 0
+
+uniqueDirectories:
+  - base: /tmp
+  - prefix: log
+  - suffix: .dir
+  - variable: logDirectory
+
 serviceProperties:
     id: 1
     updateGroup: B
