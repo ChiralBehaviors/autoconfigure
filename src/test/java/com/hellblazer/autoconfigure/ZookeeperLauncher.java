@@ -18,6 +18,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -47,14 +50,17 @@ import com.fasterxml.jackson.databind.JsonMappingException;
  */
 public class ZookeeperLauncher {
 	public static void main(String[] argv) throws Exception {
-		if (argv.length != 1) {
-			System.err
-					.println("Requires one argument, the path to the configuration file");
+		if (argv.length < 1 || argv.length > 2) {
+			System.err.println("ZookeeperLauncher [<id>] <config file>");
 			System.exit(1);
 			return;
 		}
 		ZookeeperLauncher launcher = new ZookeeperLauncher();
-		launcher.launch(new File(argv[0]));
+		if (argv.length == 2) {
+			launcher.launch(argv[0], new File(argv[1]));
+		} else {
+			launcher.launch(null, new File(argv[0]));
+		}
 	}
 
 	// Used in testing
@@ -73,16 +79,39 @@ public class ZookeeperLauncher {
 		return quorumPeer;
 	}
 
-	public void launch(File configFile) throws JsonParseException,
+	public void launch(String myid, File configFile) throws JsonParseException,
 			JsonMappingException, IOException {
 		InputStream fis = new FileInputStream(configFile);
 		final Configuration config = YamlHelper.fromYaml(fis);
 		fis.close();
+		Map<String, String> runProperties = new HashMap<>();
+		// if myid == null, then we're expecting a -Dmyid=<int> System property,
+		// or
+		// a "myid" file in the data directory
+		if (myid != null) {
+			runProperties.put("myid", myid);
+		}
 		AutoConfigure autoConfig = new AutoConfigure(config);
-		autoConfig.configure(new Runnable() {
+		autoConfig.configure(runProperties, successAction(), failureAction(),
+				60, TimeUnit.SECONDS);
+	}
+
+	private ConfiguarationAction failureAction() {
+		return new ConfiguarationAction() {
 			@Override
-			public void run() {
-				String configurationFile = config.configurations.get(0)
+			public void run(List<File> transformedConfigurations) {
+				configurationCompleted.set(true);
+				success.set(false);
+				System.err.println("Auto configuration of Zookeeper failed");
+			}
+		};
+	}
+
+	private ConfiguarationAction successAction() {
+		return new ConfiguarationAction() {
+			@Override
+			public void run(List<File> configurations) {
+				String configurationFile = configurations.get(0)
 						.getAbsolutePath();
 				try {
 					initializeAndRun(new String[] { configurationFile });
@@ -92,17 +121,10 @@ public class ZookeeperLauncher {
 					throw new IllegalStateException(
 							String.format(
 									"Unable to start zookeeper using configuration file %s",
-									configurationFile));
+									configurationFile), e);
 				}
 			}
-		}, new Runnable() {
-			@Override
-			public void run() {
-				configurationCompleted.set(true);
-				success.set(false);
-				System.err.println("Auto configuration of Zookeeper failed");
-			}
-		}, 60, TimeUnit.SECONDS);
+		};
 	}
 
 	/**

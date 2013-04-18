@@ -35,12 +35,15 @@ import static org.junit.Assert.*;
  */
 public class FunctionalTest {
 
-	// @Test
+	@Test
 	public void example() throws Exception {
 		try (TemporaryDirectory tempDir = new TemporaryDirectory(
-				"functional-test-", ".dir", new File(".").getAbsoluteFile());) {
+				"functional-test-", ".dir", new File("").getAbsoluteFile());) {
 			BasicConfigurator.configure();
-			File autoconfig = new File(tempDir.directory, "autoconfigure.yml");
+			File autoconfig = new File(tempDir.directory, "autoconfigure.yml")
+					.getAbsoluteFile();
+			File zookeeper = new File(tempDir.directory, "zookeeper.cfg")
+					.getAbsoluteFile();
 			Map<String, String> testProperties = new HashMap<>();
 			Gossip gossipSeed = new GossipConfiguration().construct();
 			InetSocketAddress gossipSeedAddress = gossipSeed.getLocalAddress();
@@ -58,12 +61,12 @@ public class FunctionalTest {
 					"src/test/resources/zookeeper/autoconfigure.yml"),
 					autoconfig, testProperties);
 			Utils.replaceProperties(new File(
-					"src/test/resources/zookeeper/zoo.cfg"), new File(
-					tempDir.directory, "zookeeper.cfg"), testProperties);
+					"src/test/resources/zookeeper/zoo.cfg"), zookeeper,
+					testProperties);
 			final ZookeeperLauncher launcher1 = new ZookeeperLauncher();
 			final ZookeeperLauncher launcher2 = new ZookeeperLauncher();
-			launcher1.launch(autoconfig);
-			launcher2.launch(autoconfig);
+			launcher1.launch("1", autoconfig);
+			launcher2.launch("2", autoconfig);
 			assertTrue("Zookeeper 1 did not complete configuration",
 					Utils.waitForCondition(60 * 1000, new Condition() {
 						@Override

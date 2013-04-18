@@ -3,21 +3,25 @@ hostVariable: host
 portVariable: connect.port
 networkInterface: en0
 addressIndex: 0
+additionalPorts:
+  - election.port
 
 uniqueDirectories:
   - base: ${test.dir}
-  - prefix: data-
-  - suffix: .dir
-  - variable: data.directory
+    prefix: data-
+    suffix: .dir
+    variable: data.directory
 
 gossip:
     seeds: 
         - ${gossip.seed.host}:${gossip.seed.port}
         
 services:
-  - format: "%s:%s"
+  - format: "%s:%s:%s"
     service: "service:zookeeper:*"
     variable: cohort
+    properties:
+      - election.port
 
 configurations:
-  - zoo.cfg
+  - ${test.dir}/zookeeper.cfg

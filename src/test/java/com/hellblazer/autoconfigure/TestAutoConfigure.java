@@ -15,6 +15,7 @@
 package com.hellblazer.autoconfigure;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -69,22 +71,24 @@ public class TestAutoConfigure {
 		List<File> configurations = new ArrayList<>();
 		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 		Map<String, String> substitutions = new HashMap<>();
+		List<String> additionalPorts = new ArrayList<>();
 		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat, "host",
 				"port", "en0", 0, serviceProperties, discovery,
 				serviceDefinitions, serviceCollectionDefinitions,
-				configurations, substitutions, uniqueDirectories);
+				configurations, substitutions, uniqueDirectories,
+				additionalPorts);
 		final AtomicBoolean succeeded = new AtomicBoolean();
 		final AtomicBoolean completed = new AtomicBoolean();
-		Runnable success = new Runnable() {
+		ConfiguarationAction success = new ConfiguarationAction() {
 			@Override
-			public void run() {
+			public void run(List<File> configurations) {
 				succeeded.set(true);
 				completed.set(true);
 			}
 		};
-		Runnable failure = new Runnable() {
+		ConfiguarationAction failure = new ConfiguarationAction() {
 			@Override
-			public void run() {
+			public void run(List<File> configurations) {
 				succeeded.set(false);
 				completed.set(true);
 			}
@@ -116,6 +120,8 @@ public class TestAutoConfigure {
 		List<File> configurations = new ArrayList<>();
 		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 		Map<String, String> substitutions = new HashMap<>();
+		List<String> additionalPorts = new ArrayList<>();
+
 		final AtomicBoolean completed = new AtomicBoolean();
 		final AtomicBoolean succeeded = new AtomicBoolean();
 
@@ -131,16 +137,16 @@ public class TestAutoConfigure {
 		when(serviceCollectionUrl.getPort()).thenReturn(2);
 		when(serviceCollectionRef.getUrl()).thenReturn(serviceCollectionUrl);
 
-		Runnable success = new Runnable() {
+		ConfiguarationAction success = new ConfiguarationAction() {
 			@Override
-			public void run() {
+			public void run(List<File> configurations) {
 				succeeded.set(true);
 				completed.set(true);
 			}
 		};
-		Runnable failure = new Runnable() {
+		ConfiguarationAction failure = new ConfiguarationAction() {
 			@Override
-			public void run() {
+			public void run(List<File> configurations) {
 				succeeded.set(false);
 				completed.set(true);
 			}
@@ -149,7 +155,8 @@ public class TestAutoConfigure {
 		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat, "host",
 				"port", "en0", 0, serviceProperties, discovery,
 				serviceDefinitions, serviceCollectionDefinitions,
-				configurations, substitutions, uniqueDirectories);
+				configurations, substitutions, uniqueDirectories,
+				additionalPorts);
 		autoConfigure.configure(success, failure, 100, TimeUnit.MILLISECONDS);
 		autoConfigure.discover(serviceRef, service);
 		autoConfigure.discover(serviceCollectionRef, serviceCollection);
@@ -210,21 +217,24 @@ public class TestAutoConfigure {
 			for (File config : tempDirectory.directory.listFiles()) {
 				configurations.add(config);
 			}
+			List<String> additionalPorts = new ArrayList<>();
 			Map<String, String> substitutions = new HashMap<>();
 			substitutions.put("a", "A");
 			substitutions.put("b", "B");
 			final AtomicBoolean completed = new AtomicBoolean();
 			final AtomicBoolean succeeded = new AtomicBoolean();
-			Runnable success = new Runnable() {
+			final AtomicReference<List<File>> transformedConfigurations = new AtomicReference<List<File>>();
+			ConfiguarationAction success = new ConfiguarationAction() {
 				@Override
-				public void run() {
+				public void run(List<File> configurations) {
+					transformedConfigurations.set(configurations);
 					succeeded.set(true);
 					completed.set(true);
 				}
 			};
-			Runnable failure = new Runnable() {
+			ConfiguarationAction failure = new ConfiguarationAction() {
 				@Override
-				public void run() {
+				public void run(List<File> configurations) {
 					succeeded.set(false);
 					completed.set(true);
 				}
@@ -254,7 +264,7 @@ public class TestAutoConfigure {
 					hostVariable, portVariable, "en0", 0, serviceProperties,
 					discovery, serviceDefinitions,
 					serviceCollectionDefinitions, configurations,
-					substitutions, uniqueDirectories);
+					substitutions, uniqueDirectories, additionalPorts);
 			autoConfigure.configure(success, failure, 100,
 					TimeUnit.MILLISECONDS);
 			autoConfigure.discover(serviceRef, service);
@@ -268,14 +278,15 @@ public class TestAutoConfigure {
 						}
 					}));
 			assertTrue("configuration not successful", succeeded.get());
+			assertNotNull(transformedConfigurations.get());
+			assertEquals(2, transformedConfigurations.get().size());
 			Properties properties1 = new Properties();
-			FileInputStream is = new FileInputStream(new File(
-					tempDirectory.directory, "configuration1.properties"));
+			FileInputStream is = new FileInputStream(transformedConfigurations
+					.get().get(0));
 			properties1.load(is);
 			is.close();
 			Properties properties2 = new Properties();
-			is = new FileInputStream(new File(tempDirectory.directory,
-					"configuration2.properties"));
+			is = new FileInputStream(transformedConfigurations.get().get(1));
 			properties2.load(is);
 			is.close();
 			InetSocketAddress bound = autoConfigure.getBound();

@@ -6,9 +6,9 @@ addressIndex: 0
 
 uniqueDirectories:
   - base: /tmp
-  - prefix: log
-  - suffix: .dir
-  - variable: logDirectory
+    prefix: log-
+    suffix: .dir
+    variable: log.directory
 
 serviceProperties:
     id: 1

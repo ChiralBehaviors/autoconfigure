@@ -36,6 +36,7 @@ public class Configuration {
 	public List<ServiceCollection> serviceCollections = new ArrayList<>();
 	public String serviceUrl = "service:someType:http:%s:%s/myURI";
 	public Map<String, String> serviceProperties = new HashMap<>();
+	public List<String> additionalPorts = new ArrayList<>();
 	public List<Service> services = new ArrayList<>();
 	public Map<String, String> substitutions = new HashMap<>();
 	public List<UniqueDirectory> uniqueDirectories = new ArrayList<>();

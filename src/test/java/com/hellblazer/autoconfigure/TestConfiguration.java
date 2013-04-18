@@ -14,8 +14,10 @@
  */
 package com.hellblazer.autoconfigure;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
+import java.io.File;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -58,5 +60,14 @@ public class TestConfiguration {
 		Service service = services.get(0);
 		assertEquals("%s|%s", service.format);
 		assertEquals("service:thor:rmi", service.service);
+
+		List<UniqueDirectory> uniqueDirectories = config.uniqueDirectories;
+		assertNotNull(uniqueDirectories);
+		assertEquals(1, uniqueDirectories.size());
+		UniqueDirectory dir = uniqueDirectories.get(0);
+		assertEquals(new File("/tmp"), dir.base);
+		assertEquals("log-", dir.prefix);
+		assertEquals(".dir", dir.suffix);
+		assertEquals("log.directory", dir.variable);
 	}
 }
