@@ -44,21 +44,19 @@ public class TestConfiguration {
 		assertNotNull(gossip);
 		assertEquals(new InetSocketAddress("localhost", 6754), seeds.get(0));
 		assertEquals(new InetSocketAddress("localhost", 6543), seeds.get(1));
-		List<ServiceCollection> serviceCollections = config.serviceCollections;
+		List<ServiceCollectionDefinition> serviceCollections = config.serviceCollections;
 		assertNotNull(serviceCollections);
 		assertEquals(1, serviceCollections.size());
-		ServiceCollection serviceCollection = serviceCollections.get(0);
+		ServiceCollectionDefinition serviceCollection = serviceCollections
+				.get(0);
 		assertEquals(5, serviceCollection.cardinality);
-		assertEquals("%s!%s", serviceCollection.format);
-		assertEquals(":", serviceCollection.separator);
 		assertEquals("service:iron:man", serviceCollection.service);
 		assertEquals(5, serviceCollection.cardinality);
 
-		List<Service> services = config.services;
+		List<ServiceDefinition> services = config.services;
 		assertNotNull(services);
 		assertEquals(1, services.size());
-		Service service = services.get(0);
-		assertEquals("%s|%s", service.format);
+		ServiceDefinition service = services.get(0);
 		assertEquals("service:thor:rmi", service.service);
 
 		List<UniqueDirectory> uniqueDirectories = config.uniqueDirectories;

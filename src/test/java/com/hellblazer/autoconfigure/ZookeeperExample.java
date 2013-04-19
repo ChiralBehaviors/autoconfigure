@@ -33,7 +33,7 @@ import static org.junit.Assert.*;
  * @author hhildebrand
  * 
  */
-public class FunctionalTest {
+public class ZookeeperExample {
 
 	@Test
 	public void example() throws Exception {

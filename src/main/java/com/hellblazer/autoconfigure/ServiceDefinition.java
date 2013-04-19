@@ -14,13 +14,11 @@
  */
 package com.hellblazer.autoconfigure;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
+import com.hellblazer.autoconfigure.model.Service;
 import com.hellblazer.slp.ServiceReference;
-import com.hellblazer.slp.ServiceURL;
 
 /**
  * The definition of a singluar service that needs to be discovered
@@ -28,14 +26,12 @@ import com.hellblazer.slp.ServiceURL;
  * @author hhildebrand
  * 
  */
-public class Service {
+public class ServiceDefinition {
 	private volatile ServiceReference discovered;
 
 	public String service = "service:someType:someProtocol";
-	public String format = "%s:%s";
 	public String variable = "service";
-	public List<String> properties = new ArrayList<>();
-	public Map<String, String> serviceProperties = new HashMap<>();
+	public Map<String, String> properties = new HashMap<>();
 
 	public ServiceReference getDiscovered() {
 		return discovered;
@@ -45,30 +41,15 @@ public class Service {
 		this.discovered = discovered;
 	}
 
-	/**
-	 * @return the resolved value of this service
-	 */
-	public String resolve() {
-		ServiceURL url = discovered.getUrl();
-		List<Object> values = new ArrayList<>();
-		values.add(url.getHost());
-		values.add(url.getPort());
-		for (String property : properties) {
-			values.add(discovered.getProperties().get(property));
-		}
-		return String.format(format, values.toArray());
-	}
-
 	public String toString() {
-		return String.format("Service [%s] properties %s", service,
-				serviceProperties);
+		return String.format("Service [%s] properties %s", service, properties);
 	}
 
 	/**
 	 * @return the query filter for the service collection
 	 */
 	public String constructFilter() {
-		return AutoConfigure.constructFilter(service, serviceProperties);
+		return AutoConfigure.constructFilter(service, properties);
 	}
 
 	/**
@@ -76,5 +57,13 @@ public class Service {
 	 */
 	public boolean isDiscovered() {
 		return discovered != null;
+	}
+
+	/**
+	 * @return
+	 */
+	public Service constructService() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

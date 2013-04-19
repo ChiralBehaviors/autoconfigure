@@ -14,7 +14,6 @@
  */
 package com.hellblazer.autoconfigure;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,17 +26,15 @@ import com.hellblazer.gossip.configuration.GossipConfiguration;
  * 
  */
 public class Configuration {
-	public List<File> configurations = new ArrayList<>();
-	public GossipConfiguration gossip = new GossipConfiguration();
-	public String hostVariable = "myHostName";
-	public String networkInterface = "eth0";
-	public int addressIndex = 0;
-	public String portVariable = "myPortNumber";
-	public List<ServiceCollection> serviceCollections = new ArrayList<>();
-	public String serviceUrl = "service:someType:http:%s:%s/myURI";
-	public Map<String, String> serviceProperties = new HashMap<>();
 	public List<String> additionalPorts = new ArrayList<>();
-	public List<Service> services = new ArrayList<>();
-	public Map<String, String> substitutions = new HashMap<>();
+	public int addressIndex = 0;
+	public GossipConfiguration gossip = new GossipConfiguration();
+	public String networkInterface = "eth0";
+	public List<ServiceCollectionDefinition> serviceCollections = new ArrayList<>();
+	public Map<String, String> serviceProperties = new HashMap<>();
+	public List<ServiceDefinition> services = new ArrayList<>();
+	public String serviceUrl = "service:someType:http:%s:%s/myURI";
+	public List<ConfigurationTemplate> templates = new ArrayList<>();
 	public List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
+	public Map<String, String> variables = new HashMap<>();
 }

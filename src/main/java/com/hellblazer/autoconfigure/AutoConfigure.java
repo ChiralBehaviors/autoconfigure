@@ -15,19 +15,15 @@
 package com.hellblazer.autoconfigure;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.Writer;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +36,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.stringtemplate.v4.ST;
+import org.stringtemplate.v4.STGroupFile;
+
+import com.hellblazer.autoconfigure.model.Service;
+import com.hellblazer.autoconfigure.model.ThisService;
 import com.hellblazer.nexus.GossipScope;
 import com.hellblazer.slp.InvalidSyntaxException;
 import com.hellblazer.slp.ServiceEvent;
@@ -85,20 +86,20 @@ public class AutoConfigure {
 	private final Map<String, String> additionalPorts = new HashMap<>();
 	private final int addressIndex;
 	private final AtomicReference<InetSocketAddress> bound = new AtomicReference<>();
-	private final List<File> configurations;
 	private final ServiceScope discovery;
-	private final String hostVariable;
+	private final Map<String, File> generatedConfigurations = new HashMap<>();
 	private final String networkInterface;
-	private final String portVariable;
+	private final Map<String, String> registeredServiceProperties = new HashMap<>();
 	private final AtomicReference<Rendezvous> rendezvous = new AtomicReference<>();
 	private final Map<String, String> runProperties = new HashMap<>();
-	private final Map<ServiceListener, ServiceCollection> serviceCollections = new HashMap<>();
+	private final Map<ServiceListener, ServiceCollectionDefinition> serviceCollectionDefinitions = new HashMap<>();
+	private final Map<ServiceListener, ServiceDefinition> serviceDefinitions = new HashMap<>();
 	private final String serviceFormat;
 	private final Map<String, String> serviceProperties;
 	private final AtomicReference<UUID> serviceRegistration = new AtomicReference<>();
-	private final Map<ServiceListener, Service> services = new HashMap<>();
 	private final Map<String, String> substitutions;
-	private final List<File> transformedConfigurations = new ArrayList<>();
+	private final List<ConfigurationTemplate> templates;
+	private final AtomicReference<ServiceURL> thisService = new AtomicReference<>();
 	private final List<UniqueDirectory> uniqueDirectories;
 
 	/**
@@ -110,13 +111,11 @@ public class AutoConfigure {
 	 *             - if the discovery service cannot be constructed
 	 */
 	public AutoConfigure(Configuration config) throws SocketException {
-		this(config.serviceUrl, config.hostVariable, config.portVariable,
-				config.networkInterface, config.addressIndex,
+		this(config.serviceUrl, config.networkInterface, config.addressIndex,
 				config.serviceProperties, new GossipScope(
 						config.gossip.construct()).start(), config.services,
-				config.serviceCollections, config.configurations,
-				config.substitutions, config.uniqueDirectories,
-				config.additionalPorts);
+				config.serviceCollections, config.templates, config.variables,
+				config.uniqueDirectories, config.additionalPorts);
 	}
 
 	/**
@@ -125,12 +124,6 @@ public class AutoConfigure {
 	 * @param serviceFormat
 	 *            - the format string which results in the service registration
 	 *            URL
-	 * @param hostVariable
-	 *            - the name of the variable to substitute the host of this
-	 *            service in the configuration files
-	 * @param portVariable
-	 *            - the name of the variable to substitute the allocated port of
-	 *            this service in the configuation files
 	 * @param networkInterface
 	 *            - the network interface to use to bind this service
 	 * @param addressIndex
@@ -141,13 +134,15 @@ public class AutoConfigure {
 	 *            discovery scope
 	 * @param discovery
 	 *            - the service scope used for the auto configuration process
-	 * @param serviceDefinitions
+	 * @param services
 	 *            - the list of singular services that need to be discovered
-	 * @param serviceCollectionDefinitions
+	 * @param serviceCollections
 	 *            - the list of service collections that need to be discovered
-	 * @param configurations
-	 *            - the list of files to process when all the required services
-	 *            have been discovered
+	 * @param templateGroups
+	 *            - the Map of files containing templateGroups that will
+	 *            generate the configuration files. The key is the template
+	 *            group file, the value is the generated configuration file from
+	 *            the template group generates it
 	 * @param substitutions
 	 *            - an additional list of properties that will be substituted in
 	 *            the configuration files
@@ -160,53 +155,36 @@ public class AutoConfigure {
 	 *            registration as well as being used in the processing of the
 	 *            configurations.
 	 */
-	public AutoConfigure(String serviceFormat, String hostVariable,
-			String portVariable, String networkInterface, int addressIndex,
-			Map<String, String> serviceProperties, ServiceScope discovery,
-			List<Service> serviceDefinitions,
-			List<ServiceCollection> serviceCollectionDefinitions,
-			List<File> configurations, Map<String, String> substitutions,
+	public AutoConfigure(String serviceFormat, String networkInterface,
+			int addressIndex, Map<String, String> serviceProperties,
+			ServiceScope discovery, List<ServiceDefinition> services,
+			List<ServiceCollectionDefinition> serviceCollections,
+			List<ConfigurationTemplate> templates,
+			Map<String, String> substitutions,
 			List<UniqueDirectory> uniqueDirectories,
 			List<String> additionalPorts) {
 		this.serviceFormat = serviceFormat;
-		this.hostVariable = hostVariable;
-		this.portVariable = portVariable;
 		this.networkInterface = networkInterface;
 		this.addressIndex = addressIndex;
 		this.serviceProperties = serviceProperties;
 		this.discovery = discovery;
-		this.configurations = configurations;
+		this.templates = templates;
 		this.substitutions = substitutions;
 		this.uniqueDirectories = uniqueDirectories;
 
-		for (Service service : serviceDefinitions) {
-			services.put(serviceListener(), service);
+		for (ServiceDefinition service : services) {
+			serviceDefinitions.put(serviceListener(), service);
 		}
-		for (ServiceCollection collection : serviceCollectionDefinitions) {
-			serviceCollections.put(serviceCollectionListener(), collection);
+		for (ServiceCollectionDefinition collection : serviceCollections) {
+			serviceCollectionDefinitions.put(serviceCollectionListener(),
+					collection);
 		}
 		for (String p : additionalPorts) {
 			this.additionalPorts.put(p, p);
 		}
-	}
-
-	/**
-	 * Run the auto configuration process.
-	 * 
-	 * @param success
-	 *            - the closure to evaluate upon successful auto configuration
-	 * @param failure
-	 *            - the closure to evaluate upon failure to auto configure
-	 * @param timeout
-	 *            - the length of time to wait for auto configuration to
-	 *            complete
-	 * @param unit
-	 *            - the unit of the wait time
-	 */
-	public void configure(ConfiguarationAction success,
-			ConfiguarationAction failure, long timeout, TimeUnit unit) {
-		configure(new HashMap<String, String>(), success, failure, timeout,
-				unit);
+		for (ConfigurationTemplate template : templates) {
+			generatedConfigurations.put(template.name, template.generated);
+		}
 	}
 
 	/**
@@ -226,7 +204,7 @@ public class AutoConfigure {
 	 *            processing configurations
 	 */
 	public void configure(Map<String, String> runProperties,
-			ConfiguarationAction success, ConfiguarationAction failure,
+			ConfigurationAction success, ConfigurationAction failure,
 			long timeout, TimeUnit unit) {
 		this.runProperties.putAll(runProperties);
 		logger.info(String.format("Using runtime property overrides %s",
@@ -242,7 +220,7 @@ public class AutoConfigure {
 			registerService();
 		} catch (Throwable e) {
 			logger.log(Level.SEVERE, "Unable to register this service!", e);
-			failure.run(transformedConfigurations);
+			failure.run(generatedConfigurations);
 			return;
 		}
 
@@ -265,10 +243,33 @@ public class AutoConfigure {
 			registerService();
 		} catch (Throwable e) {
 			logger.log(Level.SEVERE, "Error registering service listeners", e);
-			failure.run(transformedConfigurations);
+			failure.run(generatedConfigurations);
 		}
 	}
 
+	/**
+	 * Run the auto configuration process.
+	 * 
+	 * @param success
+	 *            - the closure to evaluate upon successful auto configuration
+	 * @param failure
+	 *            - the closure to evaluate upon failure to auto configure
+	 * @param timeout
+	 *            - the length of time to wait for auto configuration to
+	 *            complete
+	 * @param unit
+	 *            - the unit of the wait time
+	 */
+	public void configure(ConfigurationAction success,
+			ConfigurationAction failure, long timeout, TimeUnit unit) {
+		configure(new HashMap<String, String>(), success, failure, timeout,
+				unit);
+	}
+
+	/**
+	 * Allocate any additional ports required by the configured service
+	 * instance.
+	 */
 	protected void allocateAdditionalPorts() {
 		for (Map.Entry<String, String> entry : additionalPorts.entrySet()) {
 			entry.setValue(String.valueOf(Utils.allocatePort(bound.get()
@@ -276,6 +277,10 @@ public class AutoConfigure {
 		}
 	}
 
+	/**
+	 * Allocate the main service port, used when registering the instance of the
+	 * service being configured.
+	 */
 	protected void allocatePort() {
 		NetworkInterface iface;
 		try {
@@ -301,7 +306,7 @@ public class AutoConfigure {
 			}
 		} catch (SocketException e) {
 			String msg = String.format(
-					"Unable to determin if network interface [%s] is up",
+					"Unable to determine if network interface [%s] is up",
 					networkInterface);
 			logger.severe(msg);
 			throw new IllegalStateException(msg);
@@ -349,7 +354,37 @@ public class AutoConfigure {
 		bound.set(boundAddress);
 	}
 
-	protected void discover(ServiceReference reference, Service service) {
+	/**
+	 * Discover a new instance of the service collection
+	 * 
+	 * @param reference
+	 *            - the service reference of the new instance
+	 * @param serviceCollection
+	 *            - the service collection definition
+	 */
+	protected void discover(ServiceReference reference,
+			ServiceCollectionDefinition serviceCollection) {
+		logger.info(String.format(
+				"discovered [%s] for service collection [%s]",
+				reference.getUrl(), serviceCollection));
+		serviceCollection.discover(reference);
+		try {
+			rendezvous.get().meet();
+		} catch (BrokenBarrierException e) {
+			logger.finest("Barrier already broken");
+		}
+	}
+
+	/**
+	 * discover a new service singleton
+	 * 
+	 * @param reference
+	 *            - the service reference of the singleton
+	 * @param service
+	 *            - the service singleton definition
+	 */
+	protected void discover(ServiceReference reference,
+			ServiceDefinition service) {
 		logger.info(String.format("discovered [%s] for service [%s]",
 				reference.getUrl(), service));
 		if (service.isDiscovered()) {
@@ -365,32 +400,24 @@ public class AutoConfigure {
 		}
 	}
 
-	protected void discover(ServiceReference reference,
-			ServiceCollection serviceCollection) {
-		logger.info(String.format(
-				"discovered [%s] for service collection [%s]",
-				reference.getUrl(), serviceCollection));
-		serviceCollection.discover(reference);
-		try {
-			rendezvous.get().meet();
-		} catch (BrokenBarrierException e) {
-			logger.finest("Barrier already broken");
-		}
-	}
-
-	protected Runnable failureAction(final ConfiguarationAction failure) {
+	/**
+	 * @param failure
+	 * 
+	 * @return the action to run on failure
+	 */
+	protected Runnable failureAction(final ConfigurationAction failure) {
 		return new Runnable() {
 			@Override
 			public void run() {
 				logger.severe("Auto configuration failed due to not all services being discovered");
-				for (Service service : services.values()) {
+				for (ServiceDefinition service : serviceDefinitions.values()) {
 					if (!service.isDiscovered()) {
 						logger.severe(String
 								.format("Service [%s] has not been discovered",
 										service));
 					}
 				}
-				for (ServiceCollection serviceCollection : serviceCollections
+				for (ServiceCollectionDefinition serviceCollection : serviceCollectionDefinitions
 						.values()) {
 					if (!serviceCollection.isSatisfied()) {
 						int cardinality = serviceCollection.cardinality;
@@ -403,42 +430,85 @@ public class AutoConfigure {
 										cardinality));
 					}
 				}
-				failure.run(transformedConfigurations);
+				failure.run(generatedConfigurations);
 			}
 		};
 	}
 
-	protected Map<String, String> gatherPropertySubstitutions() {
-		Map<String, String> properties = new HashMap<>();
-
-		// Add any substitutions supplied
-		properties.putAll(substitutions);
-
-		// Add the bound host:port of this service
-		properties.put(hostVariable, bound.get().getHostName());
-		properties.put(portVariable, Integer.toString(bound.get().getPort()));
-
-		// Add the additional ports for this service
-		for (Map.Entry<String, String> entry : additionalPorts.entrySet()) {
-			properties.put(String.format("my.%s", entry.getKey()),
-					entry.getValue());
+	/**
+	 * Generate the configuration file from the template group
+	 * 
+	 * @param template
+	 *            - the template used to generate the configuration
+	 * @param model
+	 *            - The model for the configured service
+	 * @param variables
+	 *            - the variables used by the template
+	 */
+	protected void generate(ConfigurationTemplate template, ThisService model,
+			Map<String, String> variables) {
+		STGroupFile group = new STGroupFile(template.template.getAbsolutePath());
+		ST st = group.getInstanceOf(template.groupName);
+		if (st == null) {
+			String msg = String
+					.format("Cannot retrieve template group [%s] from templateGroup [%s]",
+							template.groupName,
+							template.template.getAbsolutePath());
+			logger.log(Level.SEVERE, msg);
+			throw new IllegalStateException(msg);
 		}
-
-		// Add all the substitutions for the service collections
-		for (ServiceCollection serviceCollection : serviceCollections.values()) {
-			properties.put(serviceCollection.variable,
-					serviceCollection.resolve());
+		for (Map.Entry<String, String> entry : variables.entrySet()) {
+			st.add(entry.getKey(), entry.getValue());
 		}
-
-		// Add all the substitutions for the services
-		for (Service service : services.values()) {
-			properties.put(service.variable, service.resolve());
+		st.add(template.thisServiceName, model);
+		String generated = st.render();
+		try (Writer writer = new FileWriter(template.generated)) {
+			writer.write(generated);
+		} catch (IOException e) {
+			String msg = String
+					.format("Cannot write generated configuration file[%s] for templateGroup [%s]",
+							template.generated.getAbsolutePath(),
+							template.template.getAbsolutePath());
+			logger.log(Level.SEVERE, msg, e);
+			throw new IllegalStateException(msg, e);
 		}
+	}
 
-		// Resolve all unique directories
+	/**
+	 * Generate the configuration files from the templates
+	 */
+	protected void generateConfigurations() {
+		ThisService model = generateModel();
+		Map<String, String> variables = getVariables();
+		for (ConfigurationTemplate template : templates) {
+			if (!template.template.exists()) {
+				String msg = String.format("missing template group file [%s]",
+						template.template.getAbsolutePath());
+				logger.severe(msg);
+				throw new IllegalStateException(msg);
+			}
+			generate(template, model, variables);
+		}
+	}
+
+	/**
+	 * @return the model that represents this configured service
+	 */
+	protected ThisService generateModel() {
+		Map<String, Service> services = new HashMap<>();
+		for (ServiceDefinition definition : serviceDefinitions.values()) {
+			services.put(definition.variable, definition.constructService());
+		}
+		Map<String, List<Service>> serviceCollections = new HashMap<>();
+		for (ServiceCollectionDefinition definition : serviceCollectionDefinitions
+				.values()) {
+			serviceCollections.put(definition.variable,
+					definition.constructServices());
+		}
+		Map<String, File> allocatedDirectories = new HashMap<>();
 		for (UniqueDirectory uDir : uniqueDirectories) {
 			try {
-				properties.put(uDir.variable, uDir.resolve().getAbsolutePath());
+				allocatedDirectories.put(uDir.variable, uDir.resolve());
 			} catch (IOException e) {
 				String msg = String.format(
 						"Cannot create unique directory [%s]", uDir);
@@ -446,6 +516,44 @@ public class AutoConfigure {
 				throw new IllegalStateException(msg, e);
 			}
 		}
+		return new ThisService(thisService.get(), registeredServiceProperties,
+				services, serviceCollections);
+	}
+
+	/**
+	 * Used for testing.
+	 * 
+	 * @return the primary bound socket address and port for the configured
+	 *         service instance.
+	 */
+	protected InetSocketAddress getBound() {
+		return bound.get();
+	}
+
+	/**
+	 * @return the cardinality of the expected number of services required to
+	 *         configure this service instance
+	 */
+	protected int getCardinality() {
+		int cardinality = 0;
+		cardinality += serviceDefinitions.size();
+		for (ServiceCollectionDefinition collection : serviceCollectionDefinitions
+				.values()) {
+			cardinality += collection.cardinality;
+		}
+		logger.info(String.format("Expecting %s service registrations",
+				cardinality));
+		return cardinality;
+	}
+
+	/**
+	 * @return the mapping of substitution variables used by the templates
+	 */
+	protected Map<String, String> getVariables() {
+		Map<String, String> properties = new HashMap<>();
+
+		// Add any substitutions supplied
+		properties.putAll(substitutions);
 
 		// Let the system properties override any configuration, if present
 		for (Map.Entry<Object, Object> entry : System.getProperties()
@@ -463,102 +571,31 @@ public class AutoConfigure {
 		return properties;
 	}
 
-	protected InetSocketAddress getBound() {
-		return bound.get();
-	}
-
-	protected int getCardinality() {
-		int cardinality = 0;
-		cardinality += services.size();
-		for (ServiceCollection collection : serviceCollections.values()) {
-			cardinality += collection.cardinality;
-		}
-		logger.info(String.format("Expecting %s service registrations",
-				cardinality));
-		return cardinality;
-	}
-
 	/**
-	 * Process the configuration file's content by creating a new version of it,
-	 * substituting the variables necessary.
-	 * 
-	 * @param configFile
-	 * @param propertySubstitutions
-	 *            - the map of variables to replace in the configuration
-	 * @return the File containing the processed content
+	 * Register the listeners for the required services on the discovery scope
 	 */
-	protected File process(File configFile,
-			Map<String, String> propertySubstitutions) {
-		File destination;
-		try {
-			destination = File.createTempFile(
-					String.format("%s-", configFile.getName()), ".processed",
-					configFile.getParentFile());
-			destination.deleteOnExit();
-		} catch (IOException e) {
-			String msg = String
-					.format("Cannot create transformed file for processing the configuration file [%s]",
-							configFile.getAbsolutePath());
-			logger.log(Level.SEVERE, msg, e);
-			throw new IllegalStateException(msg, e);
-		}
-		try (InputStream is = new FileInputStream(configFile);
-				OutputStream os = new FileOutputStream(destination);) {
-			Utils.replaceProperties(is, os, propertySubstitutions);
-			logger.info(String.format(
-					"processed configuration file [%s] > [%s]",
-					configFile.getAbsolutePath(), destination.getAbsolutePath()));
-		} catch (FileNotFoundException e) {
-			String msg = String
-					.format("Cannot open file during configuration processing  [%s] > [%s]",
-							destination.getAbsolutePath(),
-							configFile.getAbsolutePath());
-			logger.log(Level.SEVERE, msg, e);
-			throw new IllegalStateException(msg, e);
-		} catch (IOException e) {
-			String msg = String
-					.format("Error processing the configuration file [%s] > [%s]",
-							configFile.getAbsolutePath(),
-							destination.getAbsolutePath());
-			logger.log(Level.SEVERE, msg, e);
-			throw new IllegalStateException(msg, e);
-		}
-
-		return destination;
-	}
-
-	protected void processConfigurations(Map<String, String> propertySubstitions) {
-		for (File configFile : configurations) {
-			if (!configFile.exists()) {
-				String msg = String.format("missing configuration file [%s]",
-						configFile.getAbsolutePath());
-				logger.severe(msg);
-				throw new IllegalStateException(msg);
-			}
-			transformedConfigurations.add(process(configFile,
-					propertySubstitions));
-		}
-	}
-
 	protected void registerListeners() {
 		registerServiceCollectionListeners();
 		registerServiceListeners();
 	}
 
+	/**
+	 * Register the configured service instance in the discovery scope.
+	 */
 	protected void registerService() {
 		allocatePort();
 		allocateAdditionalPorts();
 		String service = String.format(serviceFormat,
 				bound.get().getHostName(), bound.get().getPort());
-		Map<String, String> properties = new HashMap<>();
-		properties.putAll(serviceProperties);
-		properties.putAll(additionalPorts);
+		registeredServiceProperties.putAll(serviceProperties);
+		registeredServiceProperties.putAll(additionalPorts);
 		try {
-			ServiceURL url = new ServiceURL(service);
+			thisService.set(new ServiceURL(service));
 			logger.info(String.format(
-					"Registering this service as [%s] with properties %s", url,
-					properties));
-			serviceRegistration.set(discovery.register(url, properties));
+					"Registering this service as [%s] with properties %s",
+					thisService.get(), registeredServiceProperties));
+			serviceRegistration.set(discovery.register(thisService.get(),
+					registeredServiceProperties));
 		} catch (MalformedURLException e) {
 			String msg = String.format("Invalid syntax for service URL [%s]",
 					service);
@@ -567,10 +604,14 @@ public class AutoConfigure {
 		}
 	}
 
+	/**
+	 * Register the listeners for the required service collections on the
+	 * discovery scope
+	 */
 	protected void registerServiceCollectionListeners() {
-		for (Map.Entry<ServiceListener, ServiceCollection> entry : serviceCollections
+		for (Map.Entry<ServiceListener, ServiceCollectionDefinition> entry : serviceCollectionDefinitions
 				.entrySet()) {
-			ServiceCollection service = entry.getValue();
+			ServiceCollectionDefinition service = entry.getValue();
 			try {
 				logger.info(String.format(
 						"Registering listener for service collection %s",
@@ -587,9 +628,14 @@ public class AutoConfigure {
 		}
 	}
 
+	/**
+	 * Register the listeners for the required singleton services on the
+	 * discovery scope
+	 */
 	protected void registerServiceListeners() {
-		for (Map.Entry<ServiceListener, Service> entry : services.entrySet()) {
-			Service service = entry.getValue();
+		for (Map.Entry<ServiceListener, ServiceDefinition> entry : serviceDefinitions
+				.entrySet()) {
+			ServiceDefinition service = entry.getValue();
 			try {
 				logger.info(String.format(
 						"Registering listener for service [%s]", service));
@@ -604,6 +650,9 @@ public class AutoConfigure {
 		}
 	}
 
+	/**
+	 * @return a service collection listener
+	 */
 	protected ServiceListener serviceCollectionListener() {
 		return new ServiceListener() {
 			@Override
@@ -611,7 +660,7 @@ public class AutoConfigure {
 				ServiceReference reference = event.getReference();
 				switch (event.getType()) {
 				case REGISTERED:
-					ServiceCollection serviceCollection = serviceCollections
+					ServiceCollectionDefinition serviceCollection = serviceCollectionDefinitions
 							.get(this);
 					if (serviceCollection == null) {
 						String msg = String.format(
@@ -638,6 +687,9 @@ public class AutoConfigure {
 		};
 	}
 
+	/**
+	 * @return a listener for a singleton service
+	 */
 	protected ServiceListener serviceListener() {
 		return new ServiceListener() {
 			@Override
@@ -651,7 +703,7 @@ public class AutoConfigure {
 				}
 				switch (event.getType()) {
 				case REGISTERED:
-					Service service = services.get(this);
+					ServiceDefinition service = serviceDefinitions.get(this);
 					if (service == null) {
 						String msg = String.format(
 								"No existing listener matching [%s]",
@@ -676,23 +728,28 @@ public class AutoConfigure {
 		};
 	}
 
-	protected Runnable successAction(final ConfiguarationAction success,
-			final ConfiguarationAction failure) {
+	/**
+	 * @param success
+	 * @param failure
+	 * @return the action to run upon successful configuration
+	 */
+	protected Runnable successAction(final ConfigurationAction success,
+			final ConfigurationAction failure) {
 		return new Runnable() {
 			@Override
 			public void run() {
 				logger.info("All services have been discovered");
 				try {
-					processConfigurations(gatherPropertySubstitutions());
+					generateConfigurations();
 				} catch (Throwable e) {
 					logger.log(Level.SEVERE, "Error processing configurations",
 							e);
-					failure.run(transformedConfigurations);
+					failure.run(generatedConfigurations);
 					return;
 				}
 				logger.info("Auto configuration successfully completed, running success action");
 				try {
-					success.run(transformedConfigurations);
+					success.run(generatedConfigurations);
 					logger.info("Success action completed");
 				} catch (Throwable e) {
 					logger.log(
@@ -700,7 +757,7 @@ public class AutoConfigure {
 							"Exception encountered during the running success action",
 							e);
 					logger.info("Running failure action");
-					failure.run(transformedConfigurations);
+					failure.run(generatedConfigurations);
 				}
 			}
 		};

@@ -19,8 +19,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.hellblazer.autoconfigure.model.Service;
 import com.hellblazer.slp.ServiceReference;
-import com.hellblazer.slp.ServiceURL;
 
 /**
  * The definition of a collection of services that need to be discovered.
@@ -28,13 +28,10 @@ import com.hellblazer.slp.ServiceURL;
  * @author hhildebrand
  * 
  */
-public class ServiceCollection {
+public class ServiceCollectionDefinition {
 	public int cardinality = 0;
-	public String format = "%s:%s";
-	public List<String> properties = new ArrayList<>();
-	public String separator = ",";
 	public String service = "service:someType:someProtocol";
-	public Map<String, String> serviceProperties = new HashMap<>();
+	public Map<String, String> properties = new HashMap<>();
 	public String variable = "services";
 	private List<ServiceReference> discovered = new ArrayList<>();
 
@@ -46,38 +43,16 @@ public class ServiceCollection {
 		return discovered;
 	}
 
-	/**
-	 * @return the resolved value of this collection
-	 */
-	public String resolve() {
-		StringBuilder builder = new StringBuilder();
-		for (int i = 0; i < discovered.size(); i++) {
-			ServiceReference service = discovered.get(i);
-			ServiceURL url = service.getUrl();
-			List<Object> values = new ArrayList<>();
-			values.add(url.getHost());
-			values.add(url.getPort());
-			for (String property : properties) {
-				values.add(service.getProperties().get(property));
-			}
-			builder.append(String.format(format, values.toArray()));
-			if (i < discovered.size() - 1) {
-				builder.append(separator);
-			}
-		}
-		return builder.toString();
-	}
-
 	public String toString() {
 		return String.format("Service Collection [%s] [%s] properties %s",
-				cardinality, service, serviceProperties);
+				cardinality, service, properties);
 	}
 
 	/**
 	 * @return the query filter for the service collection
 	 */
 	public String constructFilter() {
-		return AutoConfigure.constructFilter(service, serviceProperties);
+		return AutoConfigure.constructFilter(service, properties);
 	}
 
 	/**
@@ -92,5 +67,13 @@ public class ServiceCollection {
 	 */
 	public int getDiscoveredCardinality() {
 		return discovered.size();
+	}
+
+	/**
+	 * @return
+	 */
+	public List<Service> constructServices() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

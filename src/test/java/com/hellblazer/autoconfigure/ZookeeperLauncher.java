@@ -23,12 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.management.JMException;
-
-import org.apache.zookeeper.jmx.ManagedUtil;
 import org.apache.zookeeper.server.DatadirCleanupManager;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.ZKDatabase;
@@ -96,10 +92,10 @@ public class ZookeeperLauncher {
 				60, TimeUnit.SECONDS);
 	}
 
-	private ConfiguarationAction failureAction() {
-		return new ConfiguarationAction() {
+	private Runnable failureAction() {
+		return new Runnable() {
 			@Override
-			public void run(List<File> transformedConfigurations) {
+			public void run() {
 				configurationCompleted.set(true);
 				success.set(false);
 				System.err.println("Auto configuration of Zookeeper failed");
@@ -107,10 +103,10 @@ public class ZookeeperLauncher {
 		};
 	}
 
-	private ConfiguarationAction successAction() {
-		return new ConfiguarationAction() {
+	private Runnable successAction() {
+		return new Runnable() {
 			@Override
-			public void run(List<File> configurations) {
+			public void run() {
 				String configurationFile = configurations.get(0)
 						.getAbsolutePath();
 				try {
@@ -157,12 +153,6 @@ public class ZookeeperLauncher {
 	 * Copied from QuorumPeerMain
 	 */
 	protected void runFromConfig(QuorumPeerConfig config) throws IOException {
-		try {
-			ManagedUtil.registerLog4jMBeans();
-		} catch (JMException e) {
-			LOG.log(Level.SEVERE, "Unable to register log4j JMX control", e);
-		}
-
 		LOG.info("Starting quorum peer");
 		ServerCnxnFactory cnxnFactory = ServerCnxnFactory.createFactory();
 		cnxnFactory.configure(config.getClientPortAddress(),
