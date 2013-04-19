@@ -19,7 +19,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -92,10 +91,10 @@ public class ZookeeperLauncher {
 				60, TimeUnit.SECONDS);
 	}
 
-	private Runnable failureAction() {
-		return new Runnable() {
+	private ConfigurationAction failureAction() {
+		return new ConfigurationAction() {
 			@Override
-			public void run() {
+			public void run(Map<String, File> configurations) {
 				configurationCompleted.set(true);
 				success.set(false);
 				System.err.println("Auto configuration of Zookeeper failed");
@@ -103,11 +102,11 @@ public class ZookeeperLauncher {
 		};
 	}
 
-	private Runnable successAction() {
-		return new Runnable() {
+	private ConfigurationAction successAction() {
+		return new ConfigurationAction() {
 			@Override
-			public void run() {
-				String configurationFile = configurations.get(0)
+			public void run(Map<String, File> configurations) {
+				String configurationFile = configurations.get("zookeeper")
 						.getAbsolutePath();
 				try {
 					initializeAndRun(new String[] { configurationFile });
