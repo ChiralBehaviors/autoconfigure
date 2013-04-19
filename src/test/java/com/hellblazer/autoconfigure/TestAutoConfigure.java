@@ -40,6 +40,11 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import com.hellblazer.autoconfigure.configuration.ConfigurationAction;
+import com.hellblazer.autoconfigure.configuration.ConfigurationTemplate;
+import com.hellblazer.autoconfigure.configuration.ServiceCollectionDefinition;
+import com.hellblazer.autoconfigure.configuration.ServiceDefinition;
+import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
 import com.hellblazer.slp.ServiceListener;
 import com.hellblazer.slp.ServiceReference;
 import com.hellblazer.slp.ServiceScope;

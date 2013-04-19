@@ -12,40 +12,38 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-package com.hellblazer.autoconfigure;
+package com.hellblazer.autoconfigure.configuration;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
+import com.hellblazer.autoconfigure.AutoConfigure;
 import com.hellblazer.autoconfigure.model.Service;
 import com.hellblazer.slp.ServiceReference;
 
 /**
- * The definition of a collection of services that need to be discovered.
+ * The definition of a singluar service that needs to be discovered
  * 
  * @author hhildebrand
  * 
  */
-public class ServiceCollectionDefinition {
-	public int cardinality = 0;
+public class ServiceDefinition {
+	private volatile ServiceReference discovered;
+
 	public String service = "service:someType:someProtocol";
+	public String variable = "service";
 	public Map<String, String> properties = new HashMap<>();
-	public String variable = "services";
-	private List<ServiceReference> discovered = new ArrayList<>();
 
-	public void discover(ServiceReference reference) {
-		discovered.add(reference);
-	}
-
-	public List<ServiceReference> getDiscovered() {
+	public ServiceReference getDiscovered() {
 		return discovered;
 	}
 
+	public void discover(ServiceReference discovered) {
+		this.discovered = discovered;
+	}
+
 	public String toString() {
-		return String.format("Service Collection [%s] [%s] properties %s",
-				cardinality, service, properties);
+		return String.format("Service [%s] properties %s", service, properties);
 	}
 
 	/**
@@ -56,23 +54,16 @@ public class ServiceCollectionDefinition {
 	}
 
 	/**
-	 * @return true if all the services have been discovered
+	 * @return true if the service has been discovered
 	 */
-	public boolean isSatisfied() {
-		return discovered.size() == cardinality;
-	}
-
-	/**
-	 * @return the number of services discovered for this collection
-	 */
-	public int getDiscoveredCardinality() {
-		return discovered.size();
+	public boolean isDiscovered() {
+		return discovered != null;
 	}
 
 	/**
 	 * @return
 	 */
-	public List<Service> constructServices() {
+	public Service constructService() {
 		// TODO Auto-generated method stub
 		return null;
 	}

@@ -24,6 +24,10 @@ import java.util.List;
 
 import org.junit.Test;
 
+import com.hellblazer.autoconfigure.configuration.Configuration;
+import com.hellblazer.autoconfigure.configuration.ServiceCollectionDefinition;
+import com.hellblazer.autoconfigure.configuration.ServiceDefinition;
+import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
 import com.hellblazer.gossip.configuration.GossipConfiguration;
 
 /**

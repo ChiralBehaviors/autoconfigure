@@ -35,6 +35,8 @@ import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.hellblazer.autoconfigure.configuration.Configuration;
+import com.hellblazer.autoconfigure.configuration.ConfigurationAction;
 
 /**
  * An example of using auto configuration to simplify the configuration of a

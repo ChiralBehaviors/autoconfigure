@@ -39,6 +39,12 @@ import java.util.logging.Logger;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroupFile;
 
+import com.hellblazer.autoconfigure.configuration.Configuration;
+import com.hellblazer.autoconfigure.configuration.ConfigurationAction;
+import com.hellblazer.autoconfigure.configuration.ConfigurationTemplate;
+import com.hellblazer.autoconfigure.configuration.ServiceCollectionDefinition;
+import com.hellblazer.autoconfigure.configuration.ServiceDefinition;
+import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
 import com.hellblazer.autoconfigure.model.Service;
 import com.hellblazer.autoconfigure.model.ThisService;
 import com.hellblazer.nexus.GossipScope;
