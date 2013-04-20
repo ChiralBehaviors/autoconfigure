@@ -80,7 +80,7 @@ public class TestAutoConfigure {
 		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat, "en0",
 				0, serviceProperties, discovery, serviceDefinitions,
 				serviceCollectionDefinitions, templates, substitutions,
-				uniqueDirectories, additionalPorts);
+				uniqueDirectories, additionalPorts, true);
 		final AtomicBoolean succeeded = new AtomicBoolean();
 		final AtomicBoolean completed = new AtomicBoolean();
 		ConfigurationAction success = new ConfigurationAction() {
@@ -159,7 +159,7 @@ public class TestAutoConfigure {
 		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat, "en0",
 				0, serviceProperties, discovery, serviceDefinitions,
 				serviceCollectionDefinitions, templates, substitutions,
-				uniqueDirectories, additionalPorts);
+				uniqueDirectories, additionalPorts, true);
 		autoConfigure.configure(success, failure, 100, TimeUnit.MILLISECONDS);
 		autoConfigure.discover(serviceRef, service);
 		autoConfigure.discover(serviceCollectionRef, serviceCollection);
@@ -195,7 +195,7 @@ public class TestAutoConfigure {
 			String serviceFormat = "service:test:tcp://%s:%s";
 			String hostVariable = "host";
 			String portVariable = "port";
-			String serviceCollectionVariable = "service.collection";
+			String serviceCollectionVariable = "serviceCollection";
 			String serviceVariable = "service";
 			String serviceCollectionConfig = String.format("%s:%s,%s:%s",
 					serviceHost, serviceCollection1Port, serviceHost,
@@ -221,9 +221,10 @@ public class TestAutoConfigure {
 				ConfigurationTemplate template = new ConfigurationTemplate();
 				template.name = String.format("%s.properties",
 						Utils.getNameWithoutExtension(config));
-				template.template = config;
+				template.templateGroup = config;
 				template.generated = new File(tempDirectory.directory,
 						template.name);
+				templates.add(template);
 			}
 			List<String> additionalPorts = new ArrayList<>();
 			Map<String, String> substitutions = new HashMap<>();
@@ -237,8 +238,8 @@ public class TestAutoConfigure {
 				public void run(Map<String, File> generatedConfigurations) {
 					List<File> configs = new ArrayList<>();
 					File generated = generatedConfigurations
-							.get("configuration.1");
-					generated = generatedConfigurations.get("configuration.2");
+							.get("configuration1.properties");
+					generated = generatedConfigurations.get("configuration2.properties");
 					configs.add(generated);
 					configs.add(generated);
 					transformedConfigurations.set(configs);
@@ -277,7 +278,7 @@ public class TestAutoConfigure {
 			AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
 					"en0", 0, serviceProperties, discovery, serviceDefinitions,
 					serviceCollectionDefinitions, templates, substitutions,
-					uniqueDirectories, additionalPorts);
+					uniqueDirectories, additionalPorts, true);
 			autoConfigure.configure(success, failure, 100,
 					TimeUnit.MILLISECONDS);
 			autoConfigure.discover(serviceRef, service);

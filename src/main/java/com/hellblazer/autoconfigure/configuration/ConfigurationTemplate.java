@@ -21,12 +21,12 @@ import java.io.File;
  * 
  */
 public class ConfigurationTemplate {
-	public static final String AUTO_CONFIGURE = "auto.configure";
-	public static final String THIS_SERVICE = "this.service";
+	public static final String CONFIGURATION = "configuration";
+	public static final String THIS_SERVICE = "configuredService";
 
-	public File template;
+	public File templateGroup;
 	public File generated;
 	public String name;
-	public String groupName = AUTO_CONFIGURE;
+	public String template = CONFIGURATION;
 	public String thisServiceName = THIS_SERVICE;
 }

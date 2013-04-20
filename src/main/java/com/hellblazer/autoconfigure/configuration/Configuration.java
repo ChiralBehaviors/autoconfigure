@@ -37,4 +37,5 @@ public class Configuration {
 	public List<ConfigurationTemplate> templates = new ArrayList<>();
 	public List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 	public Map<String, String> variables = new HashMap<>();
+	public boolean verboseTemplating = false;
 }

@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.hellblazer.autoconfigure.AutoConfigure;
-import com.hellblazer.autoconfigure.model.Service;
+import com.hellblazer.autoconfigure.Service;
 import com.hellblazer.slp.ServiceReference;
 
 /**
@@ -61,10 +61,9 @@ public class ServiceDefinition {
 	}
 
 	/**
-	 * @return
+	 * @return the service model discovered for this singleton
 	 */
 	public Service constructService() {
-		// TODO Auto-generated method stub
-		return null;
+		return new Service(discovered.getUrl(), discovered.getProperties());
 	}
 }

@@ -38,9 +38,9 @@ serviceCollections:
 
 templates:
   - name: zookeeper
-    template: zookeeper.stg
+    templateGroup: zookeeper.stg
     generated: zookeeper.properties
   - name: kafka
-    template: kafka.stg
+    templateGroup: kafka.stg
     generated: kafka.properties
   

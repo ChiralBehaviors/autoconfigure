@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-package com.hellblazer.autoconfigure.model;
+package com.hellblazer.autoconfigure;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,5 +40,23 @@ public class Service {
 
 	public ServiceURL getServiceUrl() {
 		return serviceUrl;
+	}
+
+	/**
+	 * A convienence method to return the host of the service instance.
+	 * 
+	 * @return host of this service's URL
+	 */
+	public String host() {
+		return serviceUrl.getHost();
+	}
+
+	/**
+	 * A convienence method to return the port of the service instance.
+	 * 
+	 * @return port of this service's URL
+	 */
+	public int port() {
+		return serviceUrl.getPort();
 	}
 }

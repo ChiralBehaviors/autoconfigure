@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.hellblazer.autoconfigure.AutoConfigure;
-import com.hellblazer.autoconfigure.model.Service;
+import com.hellblazer.autoconfigure.Service;
 import com.hellblazer.slp.ServiceReference;
 
 /**
@@ -71,10 +71,13 @@ public class ServiceCollectionDefinition {
 	}
 
 	/**
-	 * @return
+	 * @return the list of service models discovered for this collection
 	 */
 	public List<Service> constructServices() {
-		// TODO Auto-generated method stub
-		return null;
+		List<Service> services = new ArrayList<>();
+		for (ServiceReference service : discovered) {
+			services.add(new Service(service.getUrl(), service.getProperties()));
+		}
+		return services;
 	}
 }

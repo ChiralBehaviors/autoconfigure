@@ -1,3 +1,5 @@
-host=${host}
-port=${port}
-property.b=${b}
+configuration(configuredService, b) ::= <<
+host=<configuredService.host>
+port=<configuredService.port>
+property.<b>
+>>

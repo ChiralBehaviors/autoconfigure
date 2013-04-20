@@ -1,3 +1,5 @@
-service.collection=${service.collection}
-service=${service}
-property.a=${a}
+configuration(serviceCollection, service, a) ::= <<
+service.collection=<serviceCollection>
+service=<service>
+property.a=<a>
+>>

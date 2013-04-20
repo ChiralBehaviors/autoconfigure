@@ -45,8 +45,6 @@ import com.hellblazer.autoconfigure.configuration.ConfigurationTemplate;
 import com.hellblazer.autoconfigure.configuration.ServiceCollectionDefinition;
 import com.hellblazer.autoconfigure.configuration.ServiceDefinition;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
-import com.hellblazer.autoconfigure.model.Service;
-import com.hellblazer.autoconfigure.model.ThisService;
 import com.hellblazer.nexus.GossipScope;
 import com.hellblazer.slp.InvalidSyntaxException;
 import com.hellblazer.slp.ServiceEvent;
@@ -107,6 +105,7 @@ public class AutoConfigure {
 	private final List<ConfigurationTemplate> templates;
 	private final AtomicReference<ServiceURL> thisService = new AtomicReference<>();
 	private final List<UniqueDirectory> uniqueDirectories;
+	private final boolean verboseTemplating;
 
 	/**
 	 * Construct an instance from the configuration POJO
@@ -121,7 +120,8 @@ public class AutoConfigure {
 				config.serviceProperties, new GossipScope(
 						config.gossip.construct()).start(), config.services,
 				config.serviceCollections, config.templates, config.variables,
-				config.uniqueDirectories, config.additionalPorts);
+				config.uniqueDirectories, config.additionalPorts,
+				config.verboseTemplating);
 	}
 
 	/**
@@ -144,11 +144,6 @@ public class AutoConfigure {
 	 *            - the list of singular services that need to be discovered
 	 * @param serviceCollections
 	 *            - the list of service collections that need to be discovered
-	 * @param templateGroups
-	 *            - the Map of files containing templateGroups that will
-	 *            generate the configuration files. The key is the template
-	 *            group file, the value is the generated configuration file from
-	 *            the template group generates it
 	 * @param substitutions
 	 *            - an additional list of properties that will be substituted in
 	 *            the configuration files
@@ -160,6 +155,14 @@ public class AutoConfigure {
 	 *            These properties will be added to this instance's service
 	 *            registration as well as being used in the processing of the
 	 *            configurations.
+	 * @param templateGroups
+	 *            - the Map of files containing templateGroups that will
+	 *            generate the configuration files. The key is the template
+	 *            group file, the value is the generated configuration file from
+	 *            the template group generates it
+	 * @param verboseTemplating
+	 *            - if true, turn on verbose processing when processing
+	 *            templates
 	 */
 	public AutoConfigure(String serviceFormat, String networkInterface,
 			int addressIndex, Map<String, String> serviceProperties,
@@ -168,7 +171,7 @@ public class AutoConfigure {
 			List<ConfigurationTemplate> templates,
 			Map<String, String> substitutions,
 			List<UniqueDirectory> uniqueDirectories,
-			List<String> additionalPorts) {
+			List<String> additionalPorts, boolean verboseTemplating) {
 		this.serviceFormat = serviceFormat;
 		this.networkInterface = networkInterface;
 		this.addressIndex = addressIndex;
@@ -177,6 +180,7 @@ public class AutoConfigure {
 		this.templates = templates;
 		this.substitutions = substitutions;
 		this.uniqueDirectories = uniqueDirectories;
+		this.verboseTemplating = verboseTemplating;
 
 		for (ServiceDefinition service : services) {
 			serviceDefinitions.put(serviceListener(), service);
@@ -191,6 +195,25 @@ public class AutoConfigure {
 		for (ConfigurationTemplate template : templates) {
 			generatedConfigurations.put(template.name, template.generated);
 		}
+	}
+
+	/**
+	 * Run the auto configuration process.
+	 * 
+	 * @param success
+	 *            - the closure to evaluate upon successful auto configuration
+	 * @param failure
+	 *            - the closure to evaluate upon failure to auto configure
+	 * @param timeout
+	 *            - the length of time to wait for auto configuration to
+	 *            complete
+	 * @param unit
+	 *            - the unit of the wait time
+	 */
+	public void configure(ConfigurationAction success,
+			ConfigurationAction failure, long timeout, TimeUnit unit) {
+		configure(new HashMap<String, String>(), success, failure, timeout,
+				unit);
 	}
 
 	/**
@@ -251,25 +274,6 @@ public class AutoConfigure {
 			logger.log(Level.SEVERE, "Error registering service listeners", e);
 			failure.run(generatedConfigurations);
 		}
-	}
-
-	/**
-	 * Run the auto configuration process.
-	 * 
-	 * @param success
-	 *            - the closure to evaluate upon successful auto configuration
-	 * @param failure
-	 *            - the closure to evaluate upon failure to auto configure
-	 * @param timeout
-	 *            - the length of time to wait for auto configuration to
-	 *            complete
-	 * @param unit
-	 *            - the unit of the wait time
-	 */
-	public void configure(ConfigurationAction success,
-			ConfigurationAction failure, long timeout, TimeUnit unit) {
-		configure(new HashMap<String, String>(), success, failure, timeout,
-				unit);
 	}
 
 	/**
@@ -361,6 +365,46 @@ public class AutoConfigure {
 	}
 
 	/**
+	 * @return the mapping of substitution variables used by the templates
+	 */
+	protected Map<String, Object> gatherVariables() {
+		Map<String, Object> variables = new HashMap<>();
+
+		// Add any substitutions supplied
+		variables.putAll(substitutions);
+
+		// Add the generated directories
+		for (UniqueDirectory uDir : uniqueDirectories) {
+			try {
+				variables.put(uDir.variable, uDir.resolve());
+			} catch (IOException e) {
+				String msg = String.format(
+						"Cannot create unique directory [%s]", uDir);
+				logger.log(Level.SEVERE, msg, e);
+				throw new IllegalStateException(msg, e);
+			}
+		}
+
+		// Register the service variables
+		for (ServiceDefinition definition : serviceDefinitions.values()) {
+			variables.put(definition.variable, definition.constructService());
+		}
+
+		// Register the service collection variables
+		for (ServiceCollectionDefinition definition : serviceCollectionDefinitions
+				.values()) {
+			variables.put(definition.variable, definition.constructServices());
+		}
+
+		// Finally, add any property overrides that were specified during the
+		// runtime call to configure.
+		variables.putAll(runProperties);
+
+		logger.info(String.format("Using property substitions [%s]", variables));
+		return variables;
+	}
+
+	/**
 	 * Discover a new instance of the service collection
 	 * 
 	 * @param reference
@@ -446,35 +490,54 @@ public class AutoConfigure {
 	 * 
 	 * @param template
 	 *            - the template used to generate the configuration
-	 * @param model
+	 * @param thisService
 	 *            - The model for the configured service
 	 * @param variables
 	 *            - the variables used by the template
 	 */
-	protected void generate(ConfigurationTemplate template, ThisService model,
-			Map<String, String> variables) {
-		STGroupFile group = new STGroupFile(template.template.getAbsolutePath());
-		ST st = group.getInstanceOf(template.groupName);
+	protected void generate(ConfigurationTemplate template,
+			Service thisService, Map<String, Object> variables) {
+		STGroupFile group = new STGroupFile(
+				template.templateGroup.getAbsolutePath());
+		STGroupFile.verbose = verboseTemplating;
+		STGroupFile.trackCreationEvents = verboseTemplating;
+		ST st = group.getInstanceOf(template.template);
 		if (st == null) {
 			String msg = String
-					.format("Cannot retrieve template group [%s] from templateGroup [%s]",
-							template.groupName,
-							template.template.getAbsolutePath());
+					.format("Cannot retrieve template [%s] from template group file [%s]",
+							template.template,
+							template.templateGroup.getAbsolutePath());
 			logger.log(Level.SEVERE, msg);
 			throw new IllegalStateException(msg);
 		}
-		for (Map.Entry<String, String> entry : variables.entrySet()) {
-			st.add(entry.getKey(), entry.getValue());
+		// Register the substitution variables
+		for (Map.Entry<String, Object> entry : variables.entrySet()) {
+			try {
+				st.add(entry.getKey(), entry.getValue());
+			} catch (IllegalArgumentException e) {
+				// Really? This is how I have to detect that there isn't a
+				// formal parameter? #fail
+			}
 		}
-		st.add(template.thisServiceName, model);
+
+		// Finally, register the service being configured
+		try {
+			st.add(template.thisServiceName, thisService);
+		} catch (IllegalArgumentException e) {
+			// Really? This is how I have to detect that there isn't a formal
+			// parameter? #fail
+		}
+
+		// Render!
 		String generated = st.render();
+
 		try (Writer writer = new FileWriter(template.generated)) {
 			writer.write(generated);
 		} catch (IOException e) {
 			String msg = String
 					.format("Cannot write generated configuration file[%s] for templateGroup [%s]",
 							template.generated.getAbsolutePath(),
-							template.template.getAbsolutePath());
+							template.templateGroup.getAbsolutePath());
 			logger.log(Level.SEVERE, msg, e);
 			throw new IllegalStateException(msg, e);
 		}
@@ -484,46 +547,18 @@ public class AutoConfigure {
 	 * Generate the configuration files from the templates
 	 */
 	protected void generateConfigurations() {
-		ThisService model = generateModel();
-		Map<String, String> variables = getVariables();
+		Service model = new Service(thisService.get(),
+				registeredServiceProperties);
+		Map<String, Object> variables = gatherVariables();
 		for (ConfigurationTemplate template : templates) {
-			if (!template.template.exists()) {
+			if (!template.templateGroup.exists()) {
 				String msg = String.format("missing template group file [%s]",
-						template.template.getAbsolutePath());
+						template.templateGroup.getAbsolutePath());
 				logger.severe(msg);
 				throw new IllegalStateException(msg);
 			}
 			generate(template, model, variables);
 		}
-	}
-
-	/**
-	 * @return the model that represents this configured service
-	 */
-	protected ThisService generateModel() {
-		Map<String, Service> services = new HashMap<>();
-		for (ServiceDefinition definition : serviceDefinitions.values()) {
-			services.put(definition.variable, definition.constructService());
-		}
-		Map<String, List<Service>> serviceCollections = new HashMap<>();
-		for (ServiceCollectionDefinition definition : serviceCollectionDefinitions
-				.values()) {
-			serviceCollections.put(definition.variable,
-					definition.constructServices());
-		}
-		Map<String, File> allocatedDirectories = new HashMap<>();
-		for (UniqueDirectory uDir : uniqueDirectories) {
-			try {
-				allocatedDirectories.put(uDir.variable, uDir.resolve());
-			} catch (IOException e) {
-				String msg = String.format(
-						"Cannot create unique directory [%s]", uDir);
-				logger.log(Level.SEVERE, msg, e);
-				throw new IllegalStateException(msg, e);
-			}
-		}
-		return new ThisService(thisService.get(), registeredServiceProperties,
-				services, serviceCollections);
 	}
 
 	/**
@@ -550,31 +585,6 @@ public class AutoConfigure {
 		logger.info(String.format("Expecting %s service registrations",
 				cardinality));
 		return cardinality;
-	}
-
-	/**
-	 * @return the mapping of substitution variables used by the templates
-	 */
-	protected Map<String, String> getVariables() {
-		Map<String, String> properties = new HashMap<>();
-
-		// Add any substitutions supplied
-		properties.putAll(substitutions);
-
-		// Let the system properties override any configuration, if present
-		for (Map.Entry<Object, Object> entry : System.getProperties()
-				.entrySet()) {
-			properties.put(String.valueOf(entry.getKey()),
-					String.valueOf(entry.getValue()));
-		}
-
-		// Finally, add any property overrides that were specified during the
-		// runtime call to configure.
-		properties.putAll(runProperties);
-
-		logger.info(String
-				.format("Using property substitions [%s]", properties));
-		return properties;
 	}
 
 	/**
