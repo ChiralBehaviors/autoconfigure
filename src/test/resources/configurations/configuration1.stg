@@ -1,5 +1,5 @@
 configuration(configuredService, b) ::= <<
 host=<configuredService.host>
 port=<configuredService.port>
-property.<b>
+property.b=<b>
 >>

@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -91,6 +92,7 @@ public class AutoConfigure {
 	private final int addressIndex;
 	private final AtomicReference<InetSocketAddress> bound = new AtomicReference<>();
 	private final ServiceScope discovery;
+	private final AtomicBoolean failed = new AtomicBoolean();
 	private final Map<String, File> generatedConfigurations = new HashMap<>();
 	private final String networkInterface;
 	private final Map<String, String> registeredServiceProperties = new HashMap<>();
@@ -249,6 +251,7 @@ public class AutoConfigure {
 			registerService();
 		} catch (Throwable e) {
 			logger.log(Level.SEVERE, "Unable to register this service!", e);
+			failed.set(true);
 			failure.run(generatedConfigurations);
 			return;
 		}
@@ -272,6 +275,7 @@ public class AutoConfigure {
 			registerService();
 		} catch (Throwable e) {
 			logger.log(Level.SEVERE, "Error registering service listeners", e);
+			failed.set(true);
 			failure.run(generatedConfigurations);
 		}
 	}
@@ -365,46 +369,6 @@ public class AutoConfigure {
 	}
 
 	/**
-	 * @return the mapping of substitution variables used by the templates
-	 */
-	protected Map<String, Object> gatherVariables() {
-		Map<String, Object> variables = new HashMap<>();
-
-		// Add any substitutions supplied
-		variables.putAll(substitutions);
-
-		// Add the generated directories
-		for (UniqueDirectory uDir : uniqueDirectories) {
-			try {
-				variables.put(uDir.variable, uDir.resolve());
-			} catch (IOException e) {
-				String msg = String.format(
-						"Cannot create unique directory [%s]", uDir);
-				logger.log(Level.SEVERE, msg, e);
-				throw new IllegalStateException(msg, e);
-			}
-		}
-
-		// Register the service variables
-		for (ServiceDefinition definition : serviceDefinitions.values()) {
-			variables.put(definition.variable, definition.constructService());
-		}
-
-		// Register the service collection variables
-		for (ServiceCollectionDefinition definition : serviceCollectionDefinitions
-				.values()) {
-			variables.put(definition.variable, definition.constructServices());
-		}
-
-		// Finally, add any property overrides that were specified during the
-		// runtime call to configure.
-		variables.putAll(runProperties);
-
-		logger.info(String.format("Using property substitions [%s]", variables));
-		return variables;
-	}
-
-	/**
 	 * Discover a new instance of the service collection
 	 * 
 	 * @param reference
@@ -459,6 +423,9 @@ public class AutoConfigure {
 		return new Runnable() {
 			@Override
 			public void run() {
+				if (!failed.compareAndSet(false, true)) {
+					return;
+				}
 				logger.severe("Auto configuration failed due to not all services being discovered");
 				for (ServiceDefinition service : serviceDefinitions.values()) {
 					if (!service.isDiscovered()) {
@@ -483,6 +450,46 @@ public class AutoConfigure {
 				failure.run(generatedConfigurations);
 			}
 		};
+	}
+
+	/**
+	 * @return the mapping of substitution variables used by the templates
+	 */
+	protected Map<String, Object> gatherVariables() {
+		Map<String, Object> variables = new HashMap<>();
+
+		// Add any substitutions supplied
+		variables.putAll(substitutions);
+
+		// Add the generated directories
+		for (UniqueDirectory uDir : uniqueDirectories) {
+			try {
+				variables.put(uDir.variable, uDir.resolve());
+			} catch (IOException e) {
+				String msg = String.format(
+						"Cannot create unique directory [%s]", uDir);
+				logger.log(Level.SEVERE, msg, e);
+				throw new IllegalStateException(msg, e);
+			}
+		}
+
+		// Register the service variables
+		for (ServiceDefinition definition : serviceDefinitions.values()) {
+			variables.put(definition.variable, definition.constructService());
+		}
+
+		// Register the service collection variables
+		for (ServiceCollectionDefinition definition : serviceCollectionDefinitions
+				.values()) {
+			variables.put(definition.variable, definition.constructServices());
+		}
+
+		// Finally, add any property overrides that were specified during the
+		// runtime call to configure.
+		variables.putAll(runProperties);
+
+		logger.info(String.format("Using property substitions [%s]", variables));
+		return variables;
 	}
 
 	/**
@@ -754,12 +761,16 @@ public class AutoConfigure {
 		return new Runnable() {
 			@Override
 			public void run() {
+				if (failed.get()) {
+					return;
+				}
 				logger.info("All services have been discovered");
 				try {
 					generateConfigurations();
 				} catch (Throwable e) {
 					logger.log(Level.SEVERE, "Error processing configurations",
 							e);
+					failed.set(true);
 					failure.run(generatedConfigurations);
 					return;
 				}
@@ -772,6 +783,7 @@ public class AutoConfigure {
 							Level.SEVERE,
 							"Exception encountered during the running success action",
 							e);
+					failed.set(true);
 					logger.info("Running failure action");
 					failure.run(generatedConfigurations);
 				}

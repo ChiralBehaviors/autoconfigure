@@ -1,5 +1,5 @@
 configuration(serviceCollection, service, a) ::= <<
-service.collection=<serviceCollection>
-service=<service>
+serviceCollection=<serviceCollection:{ s | <s.host>:<s.port>,}>
+service=<service.host>:<service.port>
 property.a=<a>
 >>

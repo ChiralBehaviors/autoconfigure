@@ -47,7 +47,7 @@ public class Service {
 	 * 
 	 * @return host of this service's URL
 	 */
-	public String host() {
+	public String getHost() {
 		return serviceUrl.getHost();
 	}
 
@@ -56,7 +56,7 @@ public class Service {
 	 * 
 	 * @return port of this service's URL
 	 */
-	public int port() {
+	public int getPort() {
 		return serviceUrl.getPort();
 	}
 }

@@ -26,6 +26,8 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.FileInputStream;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,10 +63,12 @@ public class TestAutoConfigure {
 
 	@Mock
 	private ServiceScope discovery;
+	private String interfaceName;
 
 	@Before
-	public void setup() {
+	public void setup() throws SocketException {
 		MockitoAnnotations.initMocks(this);
+		interfaceName = NetworkInterface.getByIndex(1).getName();
 	}
 
 	@Test
@@ -77,10 +81,10 @@ public class TestAutoConfigure {
 		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 		Map<String, String> substitutions = new HashMap<>();
 		List<String> additionalPorts = new ArrayList<>();
-		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat, "en0",
-				0, serviceProperties, discovery, serviceDefinitions,
-				serviceCollectionDefinitions, templates, substitutions,
-				uniqueDirectories, additionalPorts, true);
+		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
+				interfaceName, 0, serviceProperties, discovery,
+				serviceDefinitions, serviceCollectionDefinitions, templates,
+				substitutions, uniqueDirectories, additionalPorts, true);
 		final AtomicBoolean succeeded = new AtomicBoolean();
 		final AtomicBoolean completed = new AtomicBoolean();
 		ConfigurationAction success = new ConfigurationAction() {
@@ -156,10 +160,10 @@ public class TestAutoConfigure {
 			}
 		};
 
-		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat, "en0",
-				0, serviceProperties, discovery, serviceDefinitions,
-				serviceCollectionDefinitions, templates, substitutions,
-				uniqueDirectories, additionalPorts, true);
+		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
+				interfaceName, 0, serviceProperties, discovery,
+				serviceDefinitions, serviceCollectionDefinitions, templates,
+				substitutions, uniqueDirectories, additionalPorts, true);
 		autoConfigure.configure(success, failure, 100, TimeUnit.MILLISECONDS);
 		autoConfigure.discover(serviceRef, service);
 		autoConfigure.discover(serviceCollectionRef, serviceCollection);
@@ -197,7 +201,7 @@ public class TestAutoConfigure {
 			String portVariable = "port";
 			String serviceCollectionVariable = "serviceCollection";
 			String serviceVariable = "service";
-			String serviceCollectionConfig = String.format("%s:%s,%s:%s",
+			String serviceCollectionConfig = String.format("%s:%s,%s:%s,",
 					serviceHost, serviceCollection1Port, serviceHost,
 					serviceCollection2Port);
 			String serviceConfig = String.format("%s:%s", serviceHost,
@@ -239,8 +243,9 @@ public class TestAutoConfigure {
 					List<File> configs = new ArrayList<>();
 					File generated = generatedConfigurations
 							.get("configuration1.properties");
-					generated = generatedConfigurations.get("configuration2.properties");
 					configs.add(generated);
+					generated = generatedConfigurations
+							.get("configuration2.properties");
 					configs.add(generated);
 					transformedConfigurations.set(configs);
 					succeeded.set(true);
@@ -276,9 +281,10 @@ public class TestAutoConfigure {
 					serviceCollection2Url);
 
 			AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
-					"en0", 0, serviceProperties, discovery, serviceDefinitions,
-					serviceCollectionDefinitions, templates, substitutions,
-					uniqueDirectories, additionalPorts, true);
+					interfaceName, 0, serviceProperties, discovery,
+					serviceDefinitions, serviceCollectionDefinitions,
+					templates, substitutions, uniqueDirectories,
+					additionalPorts, true);
 			autoConfigure.configure(success, failure, 100,
 					TimeUnit.MILLISECONDS);
 			autoConfigure.discover(serviceRef, service);
