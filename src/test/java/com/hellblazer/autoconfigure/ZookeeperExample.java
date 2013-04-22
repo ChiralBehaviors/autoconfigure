@@ -112,7 +112,7 @@ public class ZookeeperExample {
 						}
 					}));
 
-			Thread.sleep(100); // Just because
+			Thread.sleep(2000); // Just because
 			assertTrue("Zookeeper 2 did not find its peer",
 					Utils.waitForCondition(60 * 1000, new Condition() {
 						@Override
@@ -132,7 +132,7 @@ public class ZookeeperExample {
 						}
 					}));
 
-			Thread.sleep(100); // Just because
+			Thread.sleep(2000); // Just because
 			assertTrue("Zookeeper 2 does not have the correct view size",
 					Utils.waitForCondition(60 * 1000, new Condition() {
 						@Override

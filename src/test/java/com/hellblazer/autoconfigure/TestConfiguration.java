@@ -25,8 +25,8 @@ import java.util.List;
 import org.junit.Test;
 
 import com.hellblazer.autoconfigure.configuration.Configuration;
-import com.hellblazer.autoconfigure.configuration.ServiceCollectionDefinition;
-import com.hellblazer.autoconfigure.configuration.ServiceDefinition;
+import com.hellblazer.autoconfigure.configuration.ServiceCollection;
+import com.hellblazer.autoconfigure.configuration.SingletonService;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
 import com.hellblazer.gossip.configuration.GossipConfiguration;
 
@@ -48,19 +48,19 @@ public class TestConfiguration {
 		assertNotNull(gossip);
 		assertEquals(new InetSocketAddress("localhost", 6754), seeds.get(0));
 		assertEquals(new InetSocketAddress("localhost", 6543), seeds.get(1));
-		List<ServiceCollectionDefinition> serviceCollections = config.serviceCollections;
+		List<ServiceCollection> serviceCollections = config.serviceCollections;
 		assertNotNull(serviceCollections);
 		assertEquals(1, serviceCollections.size());
-		ServiceCollectionDefinition serviceCollection = serviceCollections
+		ServiceCollection serviceCollection = serviceCollections
 				.get(0);
 		assertEquals(5, serviceCollection.cardinality);
 		assertEquals("service:iron:man", serviceCollection.service);
 		assertEquals(5, serviceCollection.cardinality);
 
-		List<ServiceDefinition> services = config.services;
+		List<SingletonService> services = config.services;
 		assertNotNull(services);
 		assertEquals(1, services.size());
-		ServiceDefinition service = services.get(0);
+		SingletonService service = services.get(0);
 		assertEquals("service:thor:rmi", service.service);
 
 		List<UniqueDirectory> uniqueDirectories = config.uniqueDirectories;

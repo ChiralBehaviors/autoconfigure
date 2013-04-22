@@ -30,9 +30,9 @@ public class Configuration {
 	public int addressIndex = 0;
 	public GossipConfiguration gossip = new GossipConfiguration();
 	public String networkInterface = "eth0";
-	public List<ServiceCollectionDefinition> serviceCollections = new ArrayList<>();
+	public List<ServiceCollection> serviceCollections = new ArrayList<>();
 	public Map<String, String> serviceProperties = new HashMap<>();
-	public List<ServiceDefinition> services = new ArrayList<>();
+	public List<SingletonService> services = new ArrayList<>();
 	public String serviceUrl = "service:someType:http:%s:%s/myURI";
 	public List<Template> templates = new ArrayList<>();
 	public List<UniqueDirectory> uniqueDirectories = new ArrayList<>();

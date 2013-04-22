@@ -43,8 +43,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.hellblazer.autoconfigure.configuration.Template;
-import com.hellblazer.autoconfigure.configuration.ServiceCollectionDefinition;
-import com.hellblazer.autoconfigure.configuration.ServiceDefinition;
+import com.hellblazer.autoconfigure.configuration.ServiceCollection;
+import com.hellblazer.autoconfigure.configuration.SingletonService;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
 import com.hellblazer.slp.ServiceListener;
 import com.hellblazer.slp.ServiceReference;
@@ -74,8 +74,8 @@ public class TestAutoConfigure {
 	public void testNoServicesRequired() {
 		String serviceFormat = "service:test:tcp://%s:%s";
 		Map<String, String> serviceProperties = new HashMap<String, String>();
-		List<ServiceDefinition> serviceDefinitions = new ArrayList<>();
-		List<ServiceCollectionDefinition> serviceCollectionDefinitions = new ArrayList<>();
+		List<SingletonService> serviceDefinitions = new ArrayList<>();
+		List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
 		List<Template> templates = new ArrayList<>();
 		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 		Map<String, String> substitutions = new HashMap<>();
@@ -115,14 +115,14 @@ public class TestAutoConfigure {
 	public void testServiceRegistration() throws Exception {
 		String serviceFormat = "service:test:tcp://%s:%s";
 		Map<String, String> serviceProperties = new HashMap<String, String>();
-		ServiceDefinition service = new ServiceDefinition();
+		SingletonService service = new SingletonService();
 		service.service = "service:testService:tcp";
-		List<ServiceDefinition> serviceDefinitions = new ArrayList<>();
+		List<SingletonService> serviceDefinitions = new ArrayList<>();
 		serviceDefinitions.add(service);
-		ServiceCollectionDefinition serviceCollection = new ServiceCollectionDefinition();
+		ServiceCollection serviceCollection = new ServiceCollection();
 		serviceCollection.service = "service:testServiceCollection:tcp";
 		serviceCollection.cardinality = 1;
-		List<ServiceCollectionDefinition> serviceCollectionDefinitions = new ArrayList<>();
+		List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
 		serviceCollectionDefinitions.add(serviceCollection);
 		List<Template> templates = new ArrayList<>();
 		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
@@ -207,17 +207,17 @@ public class TestAutoConfigure {
 					servicePort);
 
 			Map<String, String> serviceProperties = new HashMap<String, String>();
-			ServiceDefinition service = new ServiceDefinition();
+			SingletonService service = new SingletonService();
 			service.service = "service:testService:tcp";
 			service.variable = serviceVariable;
-			List<ServiceDefinition> serviceDefinitions = new ArrayList<>();
+			List<SingletonService> serviceDefinitions = new ArrayList<>();
 			serviceDefinitions.add(service);
-			ServiceCollectionDefinition serviceCollection = new ServiceCollectionDefinition();
+			ServiceCollection serviceCollection = new ServiceCollection();
 			serviceCollection.service = "service:testServiceCollection:tcp";
 			serviceCollection.cardinality = 2;
 			serviceCollection.variable = serviceCollectionVariable;
 			List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
-			List<ServiceCollectionDefinition> serviceCollectionDefinitions = new ArrayList<>();
+			List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
 			serviceCollectionDefinitions.add(serviceCollection);
 			List<Template> templates = new ArrayList<>();
 			for (File config : tempDirectory.directory.listFiles()) {

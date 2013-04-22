@@ -14,9 +14,7 @@
  */
 package com.hellblazer.autoconfigure.configuration;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.hellblazer.autoconfigure.AutoConfigure;
@@ -24,29 +22,28 @@ import com.hellblazer.autoconfigure.Service;
 import com.hellblazer.slp.ServiceReference;
 
 /**
- * The definition of a collection of services that need to be discovered.
+ * The definition of a singluar service that needs to be discovered
  * 
  * @author hhildebrand
  * 
  */
-public class ServiceCollectionDefinition {
-	public int cardinality = 0;
+public class SingletonService {
+	private volatile ServiceReference discovered;
+
 	public String service = "service:someType:someProtocol";
+	public String variable = "service";
 	public Map<String, String> properties = new HashMap<>();
-	public String variable = "services";
-	private List<ServiceReference> discovered = new ArrayList<>();
 
-	public void discover(ServiceReference reference) {
-		discovered.add(reference);
-	}
-
-	public List<ServiceReference> getDiscovered() {
+	public ServiceReference getDiscovered() {
 		return discovered;
 	}
 
+	public void discover(ServiceReference discovered) {
+		this.discovered = discovered;
+	}
+
 	public String toString() {
-		return String.format("Service Collection [%s] [%s] properties %s",
-				cardinality, service, properties);
+		return String.format("Service [%s] properties %s", service, properties);
 	}
 
 	/**
@@ -57,27 +54,16 @@ public class ServiceCollectionDefinition {
 	}
 
 	/**
-	 * @return true if all the services have been discovered
+	 * @return true if the service has been discovered
 	 */
-	public boolean isSatisfied() {
-		return discovered.size() == cardinality;
+	public boolean isDiscovered() {
+		return discovered != null;
 	}
 
 	/**
-	 * @return the number of services discovered for this collection
+	 * @return the service model discovered for this singleton
 	 */
-	public int getDiscoveredCardinality() {
-		return discovered.size();
-	}
-
-	/**
-	 * @return the list of service models discovered for this collection
-	 */
-	public List<Service> constructServices() {
-		List<Service> services = new ArrayList<>();
-		for (ServiceReference service : discovered) {
-			services.add(new Service(service.getUrl(), service.getProperties()));
-		}
-		return services;
+	public Service constructService() {
+		return new Service(discovered.getUrl(), discovered.getProperties());
 	}
 }

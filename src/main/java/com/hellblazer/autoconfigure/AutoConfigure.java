@@ -42,8 +42,8 @@ import org.stringtemplate.v4.STGroupFile;
 
 import com.hellblazer.autoconfigure.configuration.Configuration;
 import com.hellblazer.autoconfigure.configuration.Template;
-import com.hellblazer.autoconfigure.configuration.ServiceCollectionDefinition;
-import com.hellblazer.autoconfigure.configuration.ServiceDefinition;
+import com.hellblazer.autoconfigure.configuration.ServiceCollection;
+import com.hellblazer.autoconfigure.configuration.SingletonService;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
 import com.hellblazer.nexus.GossipScope;
 import com.hellblazer.slp.InvalidSyntaxException;
@@ -97,8 +97,8 @@ public class AutoConfigure {
 	private final Map<String, String> registeredServiceProperties = new HashMap<>();
 	private final AtomicReference<Rendezvous> rendezvous = new AtomicReference<>();
 	private final Map<String, String> environment = new HashMap<>();
-	private final Map<ServiceListener, ServiceCollectionDefinition> serviceCollectionDefinitions = new HashMap<>();
-	private final Map<ServiceListener, ServiceDefinition> serviceDefinitions = new HashMap<>();
+	private final Map<ServiceListener, ServiceCollection> serviceCollections = new HashMap<>();
+	private final Map<ServiceListener, SingletonService> singletonServices = new HashMap<>();
 	private final String serviceFormat;
 	private final Map<String, String> serviceProperties;
 	private final AtomicReference<UUID> serviceRegistration = new AtomicReference<>();
@@ -167,10 +167,9 @@ public class AutoConfigure {
 	 */
 	public AutoConfigure(String serviceFormat, String networkInterface,
 			int addressIndex, Map<String, String> serviceProperties,
-			ServiceScope discovery, List<ServiceDefinition> services,
-			List<ServiceCollectionDefinition> serviceCollections,
-			List<Template> templates,
-			Map<String, String> variables,
+			ServiceScope discovery, List<SingletonService> services,
+			List<ServiceCollection> serviceCollections,
+			List<Template> templates, Map<String, String> variables,
 			List<UniqueDirectory> uniqueDirectories,
 			List<String> additionalPorts, boolean verboseTemplating) {
 		this.serviceFormat = serviceFormat;
@@ -183,12 +182,12 @@ public class AutoConfigure {
 		this.uniqueDirectories = uniqueDirectories;
 		this.verboseTemplating = verboseTemplating;
 
-		for (ServiceDefinition service : services) {
-			serviceDefinitions.put(serviceListener(), service);
+		for (SingletonService service : services) {
+			singletonServices.put(serviceListener(), service);
 		}
-		for (ServiceCollectionDefinition collection : serviceCollections) {
-			serviceCollectionDefinitions.put(serviceCollectionListener(),
-					collection);
+		for (ServiceCollection collection : serviceCollections) {
+			this.serviceCollections
+					.put(serviceCollectionListener(), collection);
 		}
 		for (String p : additionalPorts) {
 			this.additionalPorts.put(p, p);
@@ -375,7 +374,7 @@ public class AutoConfigure {
 	 *            - the service collection definition
 	 */
 	protected void discover(ServiceReference reference,
-			ServiceCollectionDefinition serviceCollection) {
+			ServiceCollection serviceCollection) {
 		logger.info(String.format(
 				"discovered [%s, %s] for service collection [%s]",
 				reference.getUrl(), reference.getProperties(),
@@ -396,8 +395,7 @@ public class AutoConfigure {
 	 * @param service
 	 *            - the service singleton definition
 	 */
-	protected void discover(ServiceReference reference,
-			ServiceDefinition service) {
+	protected void discover(ServiceReference reference, SingletonService service) {
 		logger.info(String.format("discovered [%s, %s] for service [%s]",
 				reference.getUrl(), reference.getProperties(), service));
 		if (service.isDiscovered()) {
@@ -426,14 +424,14 @@ public class AutoConfigure {
 					return;
 				}
 				logger.severe("Auto configuration failed due to not all services being discovered");
-				for (ServiceDefinition service : serviceDefinitions.values()) {
+				for (SingletonService service : singletonServices.values()) {
 					if (!service.isDiscovered()) {
 						logger.severe(String
 								.format("Service [%s] has not been discovered",
 										service));
 					}
 				}
-				for (ServiceCollectionDefinition serviceCollection : serviceCollectionDefinitions
+				for (ServiceCollection serviceCollection : serviceCollections
 						.values()) {
 					if (!serviceCollection.isSatisfied()) {
 						int cardinality = serviceCollection.cardinality;
@@ -473,14 +471,13 @@ public class AutoConfigure {
 		}
 
 		// Register the service variables
-		for (ServiceDefinition definition : serviceDefinitions.values()) {
+		for (SingletonService definition : singletonServices.values()) {
 			resolvedVariables.put(definition.variable,
 					definition.constructService());
 		}
 
 		// Register the service collection variables
-		for (ServiceCollectionDefinition definition : serviceCollectionDefinitions
-				.values()) {
+		for (ServiceCollection definition : serviceCollections.values()) {
 			resolvedVariables.put(definition.variable,
 					definition.constructServices());
 		}
@@ -504,8 +501,8 @@ public class AutoConfigure {
 	 * @param variables
 	 *            - the variables used by the template
 	 */
-	protected void generate(Template template,
-			Service thisService, Map<String, Object> variables) {
+	protected void generate(Template template, Service thisService,
+			Map<String, Object> variables) {
 		STGroupFile group = new STGroupFile(
 				template.templateGroup.getAbsolutePath());
 		STGroupFile.verbose = verboseTemplating;
@@ -587,9 +584,8 @@ public class AutoConfigure {
 	 */
 	protected int getCardinality() {
 		int cardinality = 0;
-		cardinality += serviceDefinitions.size();
-		for (ServiceCollectionDefinition collection : serviceCollectionDefinitions
-				.values()) {
+		cardinality += singletonServices.size();
+		for (ServiceCollection collection : serviceCollections.values()) {
 			cardinality += collection.cardinality;
 		}
 		logger.info(String.format("Expecting %s service registrations",
@@ -636,9 +632,9 @@ public class AutoConfigure {
 	 * discovery scope
 	 */
 	protected void registerServiceCollectionListeners() {
-		for (Map.Entry<ServiceListener, ServiceCollectionDefinition> entry : serviceCollectionDefinitions
+		for (Map.Entry<ServiceListener, ServiceCollection> entry : serviceCollections
 				.entrySet()) {
-			ServiceCollectionDefinition service = entry.getValue();
+			ServiceCollection service = entry.getValue();
 			try {
 				logger.info(String.format(
 						"Registering listener for service collection %s",
@@ -660,9 +656,9 @@ public class AutoConfigure {
 	 * discovery scope
 	 */
 	protected void registerServiceListeners() {
-		for (Map.Entry<ServiceListener, ServiceDefinition> entry : serviceDefinitions
+		for (Map.Entry<ServiceListener, SingletonService> entry : singletonServices
 				.entrySet()) {
-			ServiceDefinition service = entry.getValue();
+			SingletonService service = entry.getValue();
 			try {
 				logger.info(String.format(
 						"Registering listener for service [%s]", service));
@@ -687,7 +683,7 @@ public class AutoConfigure {
 				ServiceReference reference = event.getReference();
 				switch (event.getType()) {
 				case REGISTERED:
-					ServiceCollectionDefinition serviceCollection = serviceCollectionDefinitions
+					ServiceCollection serviceCollection = serviceCollections
 							.get(this);
 					if (serviceCollection == null) {
 						String msg = String.format(
@@ -730,7 +726,7 @@ public class AutoConfigure {
 				}
 				switch (event.getType()) {
 				case REGISTERED:
-					ServiceDefinition service = serviceDefinitions.get(this);
+					SingletonService service = singletonServices.get(this);
 					if (service == null) {
 						String msg = String.format(
 								"No existing listener matching [%s]",
