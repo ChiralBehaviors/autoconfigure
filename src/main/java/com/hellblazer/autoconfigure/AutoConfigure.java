@@ -276,6 +276,7 @@ public class AutoConfigure {
 		} catch (Throwable e) {
 			logger.log(Level.SEVERE, "Error registering service listeners", e);
 			failed.set(true);
+			rendezvous.get().cancel();
 			failure.run(generatedConfigurations);
 		}
 	}
