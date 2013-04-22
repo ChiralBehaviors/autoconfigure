@@ -42,7 +42,6 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.hellblazer.autoconfigure.configuration.ConfigurationAction;
 import com.hellblazer.autoconfigure.configuration.ConfigurationTemplate;
 import com.hellblazer.autoconfigure.configuration.ServiceCollectionDefinition;
 import com.hellblazer.autoconfigure.configuration.ServiceDefinition;
