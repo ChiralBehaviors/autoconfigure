@@ -1,27 +1,27 @@
 serviceUrl: "service:zookeeper:tcp://%s:%s"
-hostVariable: host
-portVariable: connect.port
-networkInterface: en0
+networkInterface: ${network.interface}
 addressIndex: 0
 additionalPorts:
-  - election.port
+  - electionPort
+serviceProperties:
+    id: $myid
 
 uniqueDirectories:
   - base: ${test.dir}
     prefix: data-
     suffix: .dir
-    variable: data.directory
+    variable: dataDirectory
 
 gossip:
     seeds: 
         - ${gossip.seed.host}:${gossip.seed.port}
         
-services:
-  - format: "%s:%s:%s"
-    service: "service:zookeeper:tcp"
-    variable: cohort
-    properties:
-      - election.port
+serviceCollections:
+  - service: "service:zookeeper:tcp"
+    variable: cluster
+    cardinality: 2
 
-configurations:
-  - ${test.dir}/zookeeper.cfg
+templates:
+  - name: zookeeper
+    templateGroup: ${test.dir}/zookeeper.stg
+    generated: ${test.dir}/zookeeper.properties

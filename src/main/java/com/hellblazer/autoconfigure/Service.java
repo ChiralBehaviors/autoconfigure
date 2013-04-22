@@ -34,14 +34,6 @@ public class Service {
 		properties.putAll(serviceProperties);
 	}
 
-	public Map<String, String> getProperties() {
-		return properties;
-	}
-
-	public ServiceURL getServiceUrl() {
-		return serviceUrl;
-	}
-
 	/**
 	 * A convienence method to return the host of the service instance.
 	 * 
@@ -58,5 +50,17 @@ public class Service {
 	 */
 	public int getPort() {
 		return serviceUrl.getPort();
+	}
+
+	public Map<String, String> getProperties() {
+		return properties;
+	}
+
+	public ServiceURL getServiceUrl() {
+		return serviceUrl;
+	}
+	public String toString() {
+		return String.format("Service[%s] properties: %s", serviceUrl,
+				properties);
 	}
 }

@@ -97,13 +97,13 @@ public class AutoConfigure {
 	private final String networkInterface;
 	private final Map<String, String> registeredServiceProperties = new HashMap<>();
 	private final AtomicReference<Rendezvous> rendezvous = new AtomicReference<>();
-	private final Map<String, String> runProperties = new HashMap<>();
+	private final Map<String, String> environment = new HashMap<>();
 	private final Map<ServiceListener, ServiceCollectionDefinition> serviceCollectionDefinitions = new HashMap<>();
 	private final Map<ServiceListener, ServiceDefinition> serviceDefinitions = new HashMap<>();
 	private final String serviceFormat;
 	private final Map<String, String> serviceProperties;
 	private final AtomicReference<UUID> serviceRegistration = new AtomicReference<>();
-	private final Map<String, String> substitutions;
+	private final Map<String, String> variables;
 	private final List<ConfigurationTemplate> templates;
 	private final AtomicReference<ServiceURL> thisService = new AtomicReference<>();
 	private final List<UniqueDirectory> uniqueDirectories;
@@ -146,7 +146,7 @@ public class AutoConfigure {
 	 *            - the list of singular services that need to be discovered
 	 * @param serviceCollections
 	 *            - the list of service collections that need to be discovered
-	 * @param substitutions
+	 * @param variables
 	 *            - an additional list of properties that will be substituted in
 	 *            the configuration files
 	 * @param uniqueDirectories
@@ -171,7 +171,7 @@ public class AutoConfigure {
 			ServiceScope discovery, List<ServiceDefinition> services,
 			List<ServiceCollectionDefinition> serviceCollections,
 			List<ConfigurationTemplate> templates,
-			Map<String, String> substitutions,
+			Map<String, String> variables,
 			List<UniqueDirectory> uniqueDirectories,
 			List<String> additionalPorts, boolean verboseTemplating) {
 		this.serviceFormat = serviceFormat;
@@ -180,7 +180,7 @@ public class AutoConfigure {
 		this.serviceProperties = serviceProperties;
 		this.discovery = discovery;
 		this.templates = templates;
-		this.substitutions = substitutions;
+		this.variables = variables;
 		this.uniqueDirectories = uniqueDirectories;
 		this.verboseTemplating = verboseTemplating;
 
@@ -230,16 +230,15 @@ public class AutoConfigure {
 	 *            complete
 	 * @param unit
 	 *            - the unit of the wait time
-	 * @param runProperties
-	 *            - a map of substitutions that are added to the mix when
-	 *            processing configurations
+	 * @param environment
+	 *            - a map of variables that override any configured variables
 	 */
-	public void configure(Map<String, String> runProperties,
+	public void configure(Map<String, String> environment,
 			ConfigurationAction success, ConfigurationAction failure,
 			long timeout, TimeUnit unit) {
-		this.runProperties.putAll(runProperties);
+		this.environment.putAll(environment);
 		logger.info(String.format("Using runtime property overrides %s",
-				runProperties));
+				environment));
 		logger.info("Beginning auto configuration process");
 		Runnable successAction = successAction(success, failure);
 		int cardinality = getCardinality();
@@ -272,7 +271,6 @@ public class AutoConfigure {
 										"Auto Configuration Scheduling Thread")));
 		try {
 			registerListeners();
-			registerService();
 		} catch (Throwable e) {
 			logger.log(Level.SEVERE, "Error registering service listeners", e);
 			failed.set(true);
@@ -380,8 +378,9 @@ public class AutoConfigure {
 	protected void discover(ServiceReference reference,
 			ServiceCollectionDefinition serviceCollection) {
 		logger.info(String.format(
-				"discovered [%s] for service collection [%s]",
-				reference.getUrl(), serviceCollection));
+				"discovered [%s, %s] for service collection [%s]",
+				reference.getUrl(), reference.getProperties(),
+				serviceCollection));
 		serviceCollection.discover(reference);
 		try {
 			rendezvous.get().meet();
@@ -400,8 +399,8 @@ public class AutoConfigure {
 	 */
 	protected void discover(ServiceReference reference,
 			ServiceDefinition service) {
-		logger.info(String.format("discovered [%s] for service [%s]",
-				reference.getUrl(), service));
+		logger.info(String.format("discovered [%s, %s] for service [%s]",
+				reference.getUrl(), reference.getProperties(), service));
 		if (service.isDiscovered()) {
 			logger.warning(String.format(
 					"Service [%s] has already been discovered!", service));
@@ -456,16 +455,16 @@ public class AutoConfigure {
 	/**
 	 * @return the mapping of substitution variables used by the templates
 	 */
-	protected Map<String, Object> gatherVariables() {
-		Map<String, Object> variables = new HashMap<>();
+	protected Map<String, Object> resolveVariables() {
+		Map<String, Object> resolvedVariables = new HashMap<>();
 
-		// Add any substitutions supplied
-		variables.putAll(substitutions);
+		// Add any configured variables
+		resolvedVariables.putAll(variables);
 
 		// Add the generated directories
 		for (UniqueDirectory uDir : uniqueDirectories) {
 			try {
-				variables.put(uDir.variable, uDir.resolve());
+				resolvedVariables.put(uDir.variable, uDir.resolve());
 			} catch (IOException e) {
 				String msg = String.format(
 						"Cannot create unique directory [%s]", uDir);
@@ -476,21 +475,24 @@ public class AutoConfigure {
 
 		// Register the service variables
 		for (ServiceDefinition definition : serviceDefinitions.values()) {
-			variables.put(definition.variable, definition.constructService());
+			resolvedVariables.put(definition.variable,
+					definition.constructService());
 		}
 
 		// Register the service collection variables
 		for (ServiceCollectionDefinition definition : serviceCollectionDefinitions
 				.values()) {
-			variables.put(definition.variable, definition.constructServices());
+			resolvedVariables.put(definition.variable,
+					definition.constructServices());
 		}
 
 		// Finally, add any property overrides that were specified during the
 		// runtime call to configure.
-		variables.putAll(runProperties);
+		resolvedVariables.putAll(environment);
 
-		logger.info(String.format("Using property substitions [%s]", variables));
-		return variables;
+		logger.info(String.format("Using property substitions [%s]",
+				resolvedVariables));
+		return resolvedVariables;
 	}
 
 	/**
@@ -509,6 +511,7 @@ public class AutoConfigure {
 				template.templateGroup.getAbsolutePath());
 		STGroupFile.verbose = verboseTemplating;
 		STGroupFile.trackCreationEvents = verboseTemplating;
+		group.registerModelAdaptor(Service.class, new ServiceModelAdaptor());
 		ST st = group.getInstanceOf(template.template);
 		if (st == null) {
 			String msg = String
@@ -557,7 +560,7 @@ public class AutoConfigure {
 	protected void generateConfigurations() {
 		Service model = new Service(thisService.get(),
 				registeredServiceProperties);
-		Map<String, Object> variables = gatherVariables();
+		Map<String, Object> variables = resolveVariables();
 		for (ConfigurationTemplate template : templates) {
 			if (!template.templateGroup.exists()) {
 				String msg = String.format("missing template group file [%s]",
@@ -611,6 +614,7 @@ public class AutoConfigure {
 		allocateAdditionalPorts();
 		String service = String.format(serviceFormat,
 				bound.get().getHostName(), bound.get().getPort());
+		translateServiceProperties();
 		registeredServiceProperties.putAll(serviceProperties);
 		registeredServiceProperties.putAll(additionalPorts);
 		try {
@@ -790,5 +794,33 @@ public class AutoConfigure {
 				}
 			}
 		};
+	}
+
+	/**
+	 * Translate any service properties by replacing their value with the value
+	 * from either the environment or the configured variables
+	 */
+	protected void translateServiceProperties() {
+		for (Map.Entry<String, String> entry : serviceProperties.entrySet()) {
+			if (entry.getValue().startsWith("$")) {
+				// Find a replacement value
+				String replacement = entry.getValue().substring(1);
+				String translated = environment.get(replacement);
+				if (translated == null) {
+					translated = variables.get(replacement);
+				}
+				if (translated == null) {
+					String msg = String
+							.format("Could not find a substitution for service property: %s, replacement variable: %s",
+									entry.getKey(), replacement);
+					logger.log(Level.SEVERE, msg);
+					throw new IllegalArgumentException(msg);
+				}
+				logger.info(String
+						.format("Replacing service property: %s with translated value: %s [property: %s]",
+								entry.getKey(), translated, replacement));
+				entry.setValue(translated);
+			}
+		}
 	}
 }
