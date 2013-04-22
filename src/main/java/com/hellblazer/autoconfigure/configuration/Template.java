@@ -20,7 +20,7 @@ import java.io.File;
  * @author hhildebrand
  * 
  */
-public class ConfigurationTemplate {
+public class Template {
 	public static final String CONFIGURATION = "configuration";
 	public static final String THIS_SERVICE = "configuredService";
 

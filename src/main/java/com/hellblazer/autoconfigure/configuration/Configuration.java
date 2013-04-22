@@ -34,7 +34,7 @@ public class Configuration {
 	public Map<String, String> serviceProperties = new HashMap<>();
 	public List<ServiceDefinition> services = new ArrayList<>();
 	public String serviceUrl = "service:someType:http:%s:%s/myURI";
-	public List<ConfigurationTemplate> templates = new ArrayList<>();
+	public List<Template> templates = new ArrayList<>();
 	public List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 	public Map<String, String> variables = new HashMap<>();
 	public boolean verboseTemplating = false;

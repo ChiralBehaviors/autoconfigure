@@ -41,7 +41,7 @@ import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroupFile;
 
 import com.hellblazer.autoconfigure.configuration.Configuration;
-import com.hellblazer.autoconfigure.configuration.ConfigurationTemplate;
+import com.hellblazer.autoconfigure.configuration.Template;
 import com.hellblazer.autoconfigure.configuration.ServiceCollectionDefinition;
 import com.hellblazer.autoconfigure.configuration.ServiceDefinition;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
@@ -103,7 +103,7 @@ public class AutoConfigure {
 	private final Map<String, String> serviceProperties;
 	private final AtomicReference<UUID> serviceRegistration = new AtomicReference<>();
 	private final Map<String, String> variables;
-	private final List<ConfigurationTemplate> templates;
+	private final List<Template> templates;
 	private final AtomicReference<ServiceURL> thisService = new AtomicReference<>();
 	private final List<UniqueDirectory> uniqueDirectories;
 	private final boolean verboseTemplating;
@@ -169,7 +169,7 @@ public class AutoConfigure {
 			int addressIndex, Map<String, String> serviceProperties,
 			ServiceScope discovery, List<ServiceDefinition> services,
 			List<ServiceCollectionDefinition> serviceCollections,
-			List<ConfigurationTemplate> templates,
+			List<Template> templates,
 			Map<String, String> variables,
 			List<UniqueDirectory> uniqueDirectories,
 			List<String> additionalPorts, boolean verboseTemplating) {
@@ -193,7 +193,7 @@ public class AutoConfigure {
 		for (String p : additionalPorts) {
 			this.additionalPorts.put(p, p);
 		}
-		for (ConfigurationTemplate template : templates) {
+		for (Template template : templates) {
 			generatedConfigurations.put(template.name, template.generated);
 		}
 	}
@@ -504,7 +504,7 @@ public class AutoConfigure {
 	 * @param variables
 	 *            - the variables used by the template
 	 */
-	protected void generate(ConfigurationTemplate template,
+	protected void generate(Template template,
 			Service thisService, Map<String, Object> variables) {
 		STGroupFile group = new STGroupFile(
 				template.templateGroup.getAbsolutePath());
@@ -560,7 +560,7 @@ public class AutoConfigure {
 		Service model = new Service(thisService.get(),
 				registeredServiceProperties);
 		Map<String, Object> variables = resolveVariables();
-		for (ConfigurationTemplate template : templates) {
+		for (Template template : templates) {
 			if (!template.templateGroup.exists()) {
 				String msg = String.format("missing template group file [%s]",
 						template.templateGroup.getAbsolutePath());

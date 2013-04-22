@@ -42,7 +42,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.hellblazer.autoconfigure.configuration.ConfigurationTemplate;
+import com.hellblazer.autoconfigure.configuration.Template;
 import com.hellblazer.autoconfigure.configuration.ServiceCollectionDefinition;
 import com.hellblazer.autoconfigure.configuration.ServiceDefinition;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
@@ -76,7 +76,7 @@ public class TestAutoConfigure {
 		Map<String, String> serviceProperties = new HashMap<String, String>();
 		List<ServiceDefinition> serviceDefinitions = new ArrayList<>();
 		List<ServiceCollectionDefinition> serviceCollectionDefinitions = new ArrayList<>();
-		List<ConfigurationTemplate> templates = new ArrayList<>();
+		List<Template> templates = new ArrayList<>();
 		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 		Map<String, String> substitutions = new HashMap<>();
 		List<String> additionalPorts = new ArrayList<>();
@@ -124,7 +124,7 @@ public class TestAutoConfigure {
 		serviceCollection.cardinality = 1;
 		List<ServiceCollectionDefinition> serviceCollectionDefinitions = new ArrayList<>();
 		serviceCollectionDefinitions.add(serviceCollection);
-		List<ConfigurationTemplate> templates = new ArrayList<>();
+		List<Template> templates = new ArrayList<>();
 		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 		Map<String, String> substitutions = new HashMap<>();
 		List<String> additionalPorts = new ArrayList<>();
@@ -219,9 +219,9 @@ public class TestAutoConfigure {
 			List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 			List<ServiceCollectionDefinition> serviceCollectionDefinitions = new ArrayList<>();
 			serviceCollectionDefinitions.add(serviceCollection);
-			List<ConfigurationTemplate> templates = new ArrayList<>();
+			List<Template> templates = new ArrayList<>();
 			for (File config : tempDirectory.directory.listFiles()) {
-				ConfigurationTemplate template = new ConfigurationTemplate();
+				Template template = new Template();
 				template.name = String.format("%s.properties",
 						Utils.getNameWithoutExtension(config));
 				template.templateGroup = config;
