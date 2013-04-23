@@ -17,6 +17,7 @@ package com.hellblazer.autoconfigure;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.hellblazer.slp.ServiceScope;
 import com.hellblazer.slp.ServiceURL;
 
 /**
@@ -25,7 +26,7 @@ import com.hellblazer.slp.ServiceURL;
  * @author hhildebrand
  * 
  */
-public class Service {
+public class Service implements Comparable<Service> {
 	private final Map<String, String> properties = new HashMap<>();
 	private final ServiceURL serviceUrl;
 
@@ -64,5 +65,16 @@ public class Service {
 	public String toString() {
 		return String.format("Service[%s] properties: %s", serviceUrl,
 				properties);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Comparable#compareTo(java.lang.Object)
+	 */
+	@Override
+	public int compareTo(Service o) {
+		return properties.get(ServiceScope.SERVICE_REGISTRATION).compareTo(
+				o.getProperties().get(ServiceScope.SERVICE_REGISTRATION));
 	}
 }

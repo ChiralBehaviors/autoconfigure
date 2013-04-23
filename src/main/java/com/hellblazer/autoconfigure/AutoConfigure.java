@@ -104,6 +104,8 @@ public class AutoConfigure {
 	private final AtomicReference<UUID> serviceRegistration = new AtomicReference<>();
 	private final Map<ServiceListener, SingletonService> singletonServices = new HashMap<>();
 	private final List<Template> templates;
+	private final String totalOrderingFrom;
+	private final String totalOrderingVariable;
 	private final AtomicReference<ServiceURL> thisService = new AtomicReference<>();
 	private final List<UniqueDirectory> uniqueDirectories;
 	private final Map<String, String> variables;
@@ -123,6 +125,7 @@ public class AutoConfigure {
 						config.gossip.construct()).start(), config.services,
 				config.serviceCollections, config.templates, config.variables,
 				config.uniqueDirectories, config.additionalPorts,
+				config.totalOrderingFrom, config.totalOrderingVariable,
 				config.verboseTemplating);
 	}
 
@@ -157,6 +160,12 @@ public class AutoConfigure {
 	 *            These properties will be added to this instance's service
 	 *            registration as well as being used in the processing of the
 	 *            configurations.
+	 * @param totalOrderingFrom
+	 *            - the name of the service collection that provides the total
+	 *            ordering of this services cluster
+	 * @param totalOrderingVariable
+	 *            - the variable to set the index of this service in the total
+	 *            ordering of this services cluster
 	 * @param templateGroups
 	 *            - the Map of files containing templateGroups that will
 	 *            generate the configuration files. The key is the template
@@ -172,7 +181,8 @@ public class AutoConfigure {
 			List<ServiceCollection> serviceCollections,
 			List<Template> templates, Map<String, String> variables,
 			List<UniqueDirectory> uniqueDirectories,
-			List<String> additionalPorts, boolean verboseTemplating) {
+			List<String> additionalPorts, String totalOrderingFrom,
+			String totalOrderingVariable, boolean verboseTemplating) {
 		this.serviceFormat = serviceFormat;
 		this.networkInterface = networkInterface;
 		this.addressIndex = addressIndex;
@@ -181,6 +191,8 @@ public class AutoConfigure {
 		this.templates = templates;
 		this.variables = variables;
 		this.uniqueDirectories = uniqueDirectories;
+		this.totalOrderingFrom = totalOrderingFrom;
+		this.totalOrderingVariable = totalOrderingVariable;
 		this.verboseTemplating = verboseTemplating;
 
 		for (SingletonService service : services) {
@@ -597,7 +609,6 @@ public class AutoConfigure {
 		allocateAdditionalPorts();
 		String service = String.format(serviceFormat,
 				bound.get().getHostName(), bound.get().getPort());
-		translateServiceProperties();
 		registeredServiceProperties.putAll(serviceProperties);
 		registeredServiceProperties.putAll(additionalPorts);
 		try {
@@ -692,6 +703,38 @@ public class AutoConfigure {
 		for (ServiceCollection definition : serviceCollections.values()) {
 			resolvedVariables.put(definition.variable,
 					definition.constructServices());
+		}
+
+		// Register the id variable, if a service collection is indicated
+		// as the collection providing the total ordering for this service's
+		// cluster
+		if (totalOrderingFrom != null) {
+			if (totalOrderingVariable == null) {
+				logger.info(String
+						.format("Configuration indicated total ordering of this service's cluster, but no totalOrderingVariable is configured to receive this index",
+								totalOrderingFrom));
+			} else {
+				String index = null;
+				for (ServiceCollection serviceCollection : serviceCollections
+						.values()) {
+					if (serviceCollection.variable.equals(totalOrderingFrom)) {
+						index = serviceCollection
+								.totalOrderingIndexOf(serviceRegistration.get());
+						break;
+					}
+				}
+				if (index == null) {
+					String msg = String
+							.format("Configuration indicated total ordering of this service's cluster from service collection [%s], but this service could not be found in that collection",
+									totalOrderingFrom);
+					logger.log(Level.SEVERE, msg);
+					throw new IllegalStateException(msg);
+				}
+				logger.info(String
+						.format("Using a total ordering index of %s for the configured service from service collection %s",
+								index, totalOrderingFrom));
+				resolvedVariables.put(totalOrderingVariable, index);
+			}
 		}
 
 		// Finally, add any property overrides that were specified during the
@@ -819,33 +862,5 @@ public class AutoConfigure {
 				}
 			}
 		};
-	}
-
-	/**
-	 * Translate any service properties by replacing their value with the value
-	 * from either the environment or the configured variables
-	 */
-	protected void translateServiceProperties() {
-		for (Map.Entry<String, String> entry : serviceProperties.entrySet()) {
-			if (entry.getValue().startsWith("$")) {
-				// Find a replacement value
-				String replacement = entry.getValue().substring(1);
-				String translated = environment.get(replacement);
-				if (translated == null) {
-					translated = variables.get(replacement);
-				}
-				if (translated == null) {
-					String msg = String
-							.format("Could not find a substitution for service property: %s, replacement variable: %s",
-									entry.getKey(), replacement);
-					logger.log(Level.SEVERE, msg);
-					throw new IllegalArgumentException(msg);
-				}
-				logger.info(String
-						.format("Replacing service property: %s with translated value: %s [property: %s]",
-								entry.getKey(), translated, replacement));
-				entry.setValue(translated);
-			}
-		}
 	}
 }

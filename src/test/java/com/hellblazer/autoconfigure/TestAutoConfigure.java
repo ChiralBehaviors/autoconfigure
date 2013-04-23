@@ -168,7 +168,7 @@ public class TestAutoConfigure {
 					interfaceName, 0, serviceProperties, discovery,
 					serviceDefinitions, serviceCollectionDefinitions,
 					templates, substitutions, uniqueDirectories,
-					additionalPorts, true);
+					additionalPorts, null, null, true);
 			autoConfigure.configure(success, failure, 100,
 					TimeUnit.MILLISECONDS);
 			autoConfigure.discover(serviceRef, service);
@@ -225,7 +225,8 @@ public class TestAutoConfigure {
 		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
 				interfaceName, 0, serviceProperties, discovery,
 				serviceDefinitions, serviceCollectionDefinitions, templates,
-				substitutions, uniqueDirectories, additionalPorts, true);
+				substitutions, uniqueDirectories, additionalPorts, null, null,
+				true);
 		final AtomicBoolean succeeded = new AtomicBoolean();
 		final AtomicBoolean completed = new AtomicBoolean();
 		ConfigurationAction success = new ConfigurationAction() {
@@ -304,7 +305,8 @@ public class TestAutoConfigure {
 		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
 				interfaceName, 0, serviceProperties, discovery,
 				serviceDefinitions, serviceCollectionDefinitions, templates,
-				substitutions, uniqueDirectories, additionalPorts, true);
+				substitutions, uniqueDirectories, additionalPorts, null, null,
+				true);
 		autoConfigure.configure(success, failure, 100, TimeUnit.MILLISECONDS);
 		autoConfigure.discover(serviceRef, service);
 		autoConfigure.discover(serviceCollectionRef, serviceCollection);

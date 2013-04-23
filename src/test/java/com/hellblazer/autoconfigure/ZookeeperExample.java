@@ -66,7 +66,7 @@ public class ZookeeperExample {
 				@Override
 				public void run() {
 					try {
-						launcher1.launch("1", autoconfig1);
+						launcher1.launch(autoconfig1);
 					} catch (IOException e) {
 						throw new IllegalStateException(
 								"Unable to configure zookeeper 1", e);
@@ -77,7 +77,7 @@ public class ZookeeperExample {
 				@Override
 				public void run() {
 					try {
-						launcher2.launch("2", autoconfig2);
+						launcher2.launch(autoconfig2);
 					} catch (IOException e) {
 						throw new IllegalStateException(
 								"Unable to configure zookeeper 2", e);
