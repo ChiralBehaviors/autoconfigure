@@ -57,6 +57,7 @@ public class ServiceCollection {
 	public void discover(ServiceReference reference) {
 		discovered.add(new Service(reference.getUrl(), reference
 				.getProperties()));
+		canonicalizeServices();
 	}
 
 	/**
@@ -75,7 +76,6 @@ public class ServiceCollection {
 	 *         found
 	 */
 	public String totalOrderingIndexOf(UUID uuid) {
-		canonicalizeServices();
 		String registration = uuid.toString();
 		for (Service service : discovered) {
 			if (registration.equals(service.getProperties().get(
