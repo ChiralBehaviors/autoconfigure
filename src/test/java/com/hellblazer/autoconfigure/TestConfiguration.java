@@ -28,6 +28,7 @@ import com.hellblazer.autoconfigure.configuration.Configuration;
 import com.hellblazer.autoconfigure.configuration.ServiceCollection;
 import com.hellblazer.autoconfigure.configuration.SingletonService;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
+import com.hellblazer.autoconfigure.configuration.YamlHelper;
 import com.hellblazer.gossip.configuration.GossipConfiguration;
 
 /**

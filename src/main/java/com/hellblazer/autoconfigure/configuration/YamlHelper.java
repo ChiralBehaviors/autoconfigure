@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-package com.hellblazer.autoconfigure;
+package com.hellblazer.autoconfigure.configuration;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.hellblazer.autoconfigure.configuration.Configuration;
 import com.hellblazer.gossip.configuration.InetSocketAddressDeserializer;
 import com.hellblazer.gossip.configuration.TimeUnitDeserializer;
 
