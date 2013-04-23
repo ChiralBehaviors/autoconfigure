@@ -75,7 +75,7 @@ public class ServiceCollection {
 	 *         found
 	 */
 	public String totalOrderingIndexOf(UUID uuid) {
-		cannocicalizeServices();
+		canonicalizeServices();
 		String registration = uuid.toString();
 		for (Service service : discovered) {
 			if (registration.equals(service.getProperties().get(
@@ -100,11 +100,11 @@ public class ServiceCollection {
 	}
 
 	/**
-	 * Cannonicalize the services, providing a total ordering of the services.
+	 * Canonicalize the services, providing a total ordering of the services.
 	 * Add the unique index of each service to its properties, using the
 	 * supplied idProperty as the property key
 	 */
-	protected void cannocicalizeServices() {
+	protected void canonicalizeServices() {
 		Collections.sort(discovered);
 		for (int i = 1; i <= discovered.size(); i++) {
 			discovered.get(i - 1).getProperties()
