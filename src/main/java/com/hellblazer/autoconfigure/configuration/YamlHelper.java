@@ -14,6 +14,8 @@
  */
 package com.hellblazer.autoconfigure.configuration;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -33,6 +35,11 @@ import com.hellblazer.gossip.configuration.TimeUnitDeserializer;
  * 
  */
 public class YamlHelper {
+
+	public static Configuration fromYaml(File yaml) throws JsonParseException,
+			JsonMappingException, IOException {
+		return fromYaml(new FileInputStream(yaml));
+	}
 
 	public static Configuration fromYaml(InputStream yaml)
 			throws JsonParseException, JsonMappingException, IOException {

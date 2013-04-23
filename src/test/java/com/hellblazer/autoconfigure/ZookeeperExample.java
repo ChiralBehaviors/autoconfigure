@@ -63,6 +63,7 @@ public class ZookeeperExample {
 			initializeDirectories(gossipSeedAddress, dir1.directory,
 					dir2.directory, autoconfig1, autoconfig2);
 			Thread daemon1 = new Thread(new Runnable() {
+				@Override
 				public void run() {
 					try {
 						launcher1.launch("1", autoconfig1);
@@ -73,6 +74,7 @@ public class ZookeeperExample {
 				};
 			}, "Zookeeper 1 launcher");
 			Thread daemon2 = new Thread(new Runnable() {
+				@Override
 				public void run() {
 					try {
 						launcher2.launch("2", autoconfig2);

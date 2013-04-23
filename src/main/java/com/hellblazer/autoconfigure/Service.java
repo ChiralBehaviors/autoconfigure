@@ -59,6 +59,8 @@ public class Service {
 	public ServiceURL getServiceUrl() {
 		return serviceUrl;
 	}
+
+	@Override
 	public String toString() {
 		return String.format("Service[%s] properties: %s", serviceUrl,
 				properties);

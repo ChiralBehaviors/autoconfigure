@@ -24,9 +24,9 @@ public class Template {
 	public static final String CONFIGURATION = "configuration";
 	public static final String THIS_SERVICE = "configuredService";
 
-	public File templateGroup;
 	public File generated;
 	public String name;
 	public String template = CONFIGURATION;
+	public File templateGroup;
 	public String thisServiceName = THIS_SERVICE;
 }

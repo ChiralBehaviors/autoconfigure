@@ -28,23 +28,11 @@ import com.hellblazer.slp.ServiceReference;
  * 
  */
 public class SingletonService {
-	private volatile ServiceReference discovered;
+	public Map<String, String> properties = new HashMap<>();
 
 	public String service = "service:someType:someProtocol";
 	public String variable = "service";
-	public Map<String, String> properties = new HashMap<>();
-
-	public ServiceReference getDiscovered() {
-		return discovered;
-	}
-
-	public void discover(ServiceReference discovered) {
-		this.discovered = discovered;
-	}
-
-	public String toString() {
-		return String.format("Service [%s] properties %s", service, properties);
-	}
+	private volatile ServiceReference discovered;
 
 	/**
 	 * @return the query filter for the service collection
@@ -54,16 +42,29 @@ public class SingletonService {
 	}
 
 	/**
+	 * @return the service model discovered for this singleton
+	 */
+	public Service constructService() {
+		return new Service(discovered.getUrl(), discovered.getProperties());
+	}
+
+	public void discover(ServiceReference discovered) {
+		this.discovered = discovered;
+	}
+
+	public ServiceReference getDiscovered() {
+		return discovered;
+	}
+
+	/**
 	 * @return true if the service has been discovered
 	 */
 	public boolean isDiscovered() {
 		return discovered != null;
 	}
 
-	/**
-	 * @return the service model discovered for this singleton
-	 */
-	public Service constructService() {
-		return new Service(discovered.getUrl(), discovered.getProperties());
+	@Override
+	public String toString() {
+		return String.format("Service [%s] properties %s", service, properties);
 	}
 }

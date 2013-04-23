@@ -42,9 +42,9 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.hellblazer.autoconfigure.configuration.Template;
 import com.hellblazer.autoconfigure.configuration.ServiceCollection;
 import com.hellblazer.autoconfigure.configuration.SingletonService;
+import com.hellblazer.autoconfigure.configuration.Template;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
 import com.hellblazer.slp.ServiceListener;
 import com.hellblazer.slp.ServiceReference;
@@ -68,121 +68,6 @@ public class TestAutoConfigure {
 	public void setup() throws SocketException {
 		MockitoAnnotations.initMocks(this);
 		interfaceName = NetworkInterface.getByIndex(1).getName();
-	}
-
-	@Test
-	public void testNoServicesRequired() {
-		String serviceFormat = "service:test:tcp://%s:%s";
-		Map<String, String> serviceProperties = new HashMap<String, String>();
-		List<SingletonService> serviceDefinitions = new ArrayList<>();
-		List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
-		List<Template> templates = new ArrayList<>();
-		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
-		Map<String, String> substitutions = new HashMap<>();
-		List<String> additionalPorts = new ArrayList<>();
-		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
-				interfaceName, 0, serviceProperties, discovery,
-				serviceDefinitions, serviceCollectionDefinitions, templates,
-				substitutions, uniqueDirectories, additionalPorts, true);
-		final AtomicBoolean succeeded = new AtomicBoolean();
-		final AtomicBoolean completed = new AtomicBoolean();
-		ConfigurationAction success = new ConfigurationAction() {
-			@Override
-			public void run(Map<String, File> generatedConfigurations) {
-				succeeded.set(true);
-				completed.set(true);
-			}
-		};
-		ConfigurationAction failure = new ConfigurationAction() {
-			@Override
-			public void run(Map<String, File> generatedConfigurations) {
-				succeeded.set(false);
-				completed.set(true);
-			}
-		};
-		autoConfigure.configure(success, failure, 10, TimeUnit.MILLISECONDS);
-		assertTrue("configuration did not complete",
-				Utils.waitForCondition(1000, new Condition() {
-					@Override
-					public boolean isTrue() {
-						return completed.get();
-					}
-				}));
-		assertTrue("configuration did not succeed", succeeded.get());
-	}
-
-	@Test
-	public void testServiceRegistration() throws Exception {
-		String serviceFormat = "service:test:tcp://%s:%s";
-		Map<String, String> serviceProperties = new HashMap<String, String>();
-		SingletonService service = new SingletonService();
-		service.service = "service:testService:tcp";
-		List<SingletonService> serviceDefinitions = new ArrayList<>();
-		serviceDefinitions.add(service);
-		ServiceCollection serviceCollection = new ServiceCollection();
-		serviceCollection.service = "service:testServiceCollection:tcp";
-		serviceCollection.cardinality = 1;
-		List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
-		serviceCollectionDefinitions.add(serviceCollection);
-		List<Template> templates = new ArrayList<>();
-		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
-		Map<String, String> substitutions = new HashMap<>();
-		List<String> additionalPorts = new ArrayList<>();
-
-		final AtomicBoolean completed = new AtomicBoolean();
-		final AtomicBoolean succeeded = new AtomicBoolean();
-
-		ServiceReference serviceRef = mock(ServiceReference.class);
-		ServiceURL serviceUrl = mock(ServiceURL.class);
-		when(serviceRef.getUrl()).thenReturn(serviceUrl);
-		when(serviceUrl.getHost()).thenReturn("example.com");
-		when(serviceUrl.getPort()).thenReturn(1);
-
-		ServiceReference serviceCollectionRef = mock(ServiceReference.class);
-		ServiceURL serviceCollectionUrl = mock(ServiceURL.class);
-		when(serviceCollectionUrl.getHost()).thenReturn("example.com");
-		when(serviceCollectionUrl.getPort()).thenReturn(2);
-		when(serviceCollectionRef.getUrl()).thenReturn(serviceCollectionUrl);
-
-		ConfigurationAction success = new ConfigurationAction() {
-			@Override
-			public void run(Map<String, File> generatedConfigurations) {
-				succeeded.set(true);
-				completed.set(true);
-			}
-		};
-		ConfigurationAction failure = new ConfigurationAction() {
-			@Override
-			public void run(Map<String, File> generatedConfigurations) {
-				succeeded.set(false);
-				completed.set(true);
-			}
-		};
-
-		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
-				interfaceName, 0, serviceProperties, discovery,
-				serviceDefinitions, serviceCollectionDefinitions, templates,
-				substitutions, uniqueDirectories, additionalPorts, true);
-		autoConfigure.configure(success, failure, 100, TimeUnit.MILLISECONDS);
-		autoConfigure.discover(serviceRef, service);
-		autoConfigure.discover(serviceCollectionRef, serviceCollection);
-		assertTrue("configuration did not complete",
-				Utils.waitForCondition(1000, new Condition() {
-					@Override
-					public boolean isTrue() {
-						return completed.get();
-					}
-				}));
-		assertTrue("configuration not successful", succeeded.get());
-
-		verify(discovery).addServiceListener(
-				isA(ServiceListener.class),
-				eq(AutoConfigure.constructFilter(service.service,
-						service.properties)));
-		verify(discovery).addServiceListener(
-				isA(ServiceListener.class),
-				eq(AutoConfigure.constructFilter(serviceCollection.service,
-						serviceCollection.properties)));
 	}
 
 	@Test
@@ -325,5 +210,120 @@ public class TestAutoConfigure {
 			assertEquals(serviceConfig, properties2.get(serviceVariable));
 			assertEquals("A", properties2.get("property.a"));
 		}
+	}
+
+	@Test
+	public void testNoServicesRequired() {
+		String serviceFormat = "service:test:tcp://%s:%s";
+		Map<String, String> serviceProperties = new HashMap<String, String>();
+		List<SingletonService> serviceDefinitions = new ArrayList<>();
+		List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
+		List<Template> templates = new ArrayList<>();
+		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
+		Map<String, String> substitutions = new HashMap<>();
+		List<String> additionalPorts = new ArrayList<>();
+		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
+				interfaceName, 0, serviceProperties, discovery,
+				serviceDefinitions, serviceCollectionDefinitions, templates,
+				substitutions, uniqueDirectories, additionalPorts, true);
+		final AtomicBoolean succeeded = new AtomicBoolean();
+		final AtomicBoolean completed = new AtomicBoolean();
+		ConfigurationAction success = new ConfigurationAction() {
+			@Override
+			public void run(Map<String, File> generatedConfigurations) {
+				succeeded.set(true);
+				completed.set(true);
+			}
+		};
+		ConfigurationAction failure = new ConfigurationAction() {
+			@Override
+			public void run(Map<String, File> generatedConfigurations) {
+				succeeded.set(false);
+				completed.set(true);
+			}
+		};
+		autoConfigure.configure(success, failure, 10, TimeUnit.MILLISECONDS);
+		assertTrue("configuration did not complete",
+				Utils.waitForCondition(1000, new Condition() {
+					@Override
+					public boolean isTrue() {
+						return completed.get();
+					}
+				}));
+		assertTrue("configuration did not succeed", succeeded.get());
+	}
+
+	@Test
+	public void testServiceRegistration() throws Exception {
+		String serviceFormat = "service:test:tcp://%s:%s";
+		Map<String, String> serviceProperties = new HashMap<String, String>();
+		SingletonService service = new SingletonService();
+		service.service = "service:testService:tcp";
+		List<SingletonService> serviceDefinitions = new ArrayList<>();
+		serviceDefinitions.add(service);
+		ServiceCollection serviceCollection = new ServiceCollection();
+		serviceCollection.service = "service:testServiceCollection:tcp";
+		serviceCollection.cardinality = 1;
+		List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
+		serviceCollectionDefinitions.add(serviceCollection);
+		List<Template> templates = new ArrayList<>();
+		List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
+		Map<String, String> substitutions = new HashMap<>();
+		List<String> additionalPorts = new ArrayList<>();
+
+		final AtomicBoolean completed = new AtomicBoolean();
+		final AtomicBoolean succeeded = new AtomicBoolean();
+
+		ServiceReference serviceRef = mock(ServiceReference.class);
+		ServiceURL serviceUrl = mock(ServiceURL.class);
+		when(serviceRef.getUrl()).thenReturn(serviceUrl);
+		when(serviceUrl.getHost()).thenReturn("example.com");
+		when(serviceUrl.getPort()).thenReturn(1);
+
+		ServiceReference serviceCollectionRef = mock(ServiceReference.class);
+		ServiceURL serviceCollectionUrl = mock(ServiceURL.class);
+		when(serviceCollectionUrl.getHost()).thenReturn("example.com");
+		when(serviceCollectionUrl.getPort()).thenReturn(2);
+		when(serviceCollectionRef.getUrl()).thenReturn(serviceCollectionUrl);
+
+		ConfigurationAction success = new ConfigurationAction() {
+			@Override
+			public void run(Map<String, File> generatedConfigurations) {
+				succeeded.set(true);
+				completed.set(true);
+			}
+		};
+		ConfigurationAction failure = new ConfigurationAction() {
+			@Override
+			public void run(Map<String, File> generatedConfigurations) {
+				succeeded.set(false);
+				completed.set(true);
+			}
+		};
+
+		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
+				interfaceName, 0, serviceProperties, discovery,
+				serviceDefinitions, serviceCollectionDefinitions, templates,
+				substitutions, uniqueDirectories, additionalPorts, true);
+		autoConfigure.configure(success, failure, 100, TimeUnit.MILLISECONDS);
+		autoConfigure.discover(serviceRef, service);
+		autoConfigure.discover(serviceCollectionRef, serviceCollection);
+		assertTrue("configuration did not complete",
+				Utils.waitForCondition(1000, new Condition() {
+					@Override
+					public boolean isTrue() {
+						return completed.get();
+					}
+				}));
+		assertTrue("configuration not successful", succeeded.get());
+
+		verify(discovery).addServiceListener(
+				isA(ServiceListener.class),
+				eq(AutoConfigure.constructFilter(service.service,
+						service.properties)));
+		verify(discovery).addServiceListener(
+				isA(ServiceListener.class),
+				eq(AutoConfigure.constructFilter(serviceCollection.service,
+						serviceCollection.properties)));
 	}
 }

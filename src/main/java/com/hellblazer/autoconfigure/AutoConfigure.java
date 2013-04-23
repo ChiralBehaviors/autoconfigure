@@ -38,12 +38,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.stringtemplate.v4.ST;
+import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STGroupFile;
 
 import com.hellblazer.autoconfigure.configuration.Configuration;
-import com.hellblazer.autoconfigure.configuration.Template;
 import com.hellblazer.autoconfigure.configuration.ServiceCollection;
 import com.hellblazer.autoconfigure.configuration.SingletonService;
+import com.hellblazer.autoconfigure.configuration.Template;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
 import com.hellblazer.nexus.GossipScope;
 import com.hellblazer.slp.InvalidSyntaxException;
@@ -343,7 +344,7 @@ public class AutoConfigure {
 		return address;
 	}
 
-	/** 
+	/**
 	 * @return the network interface to bind this interface to.
 	 */
 	protected NetworkInterface determineNetworkInterface() {
@@ -492,8 +493,8 @@ public class AutoConfigure {
 			Map<String, Object> variables) {
 		STGroupFile group = new STGroupFile(
 				template.templateGroup.getAbsolutePath());
-		STGroupFile.verbose = verboseTemplating;
-		STGroupFile.trackCreationEvents = verboseTemplating;
+		STGroup.verbose = verboseTemplating;
+		STGroup.trackCreationEvents = verboseTemplating;
 		group.registerModelAdaptor(Service.class, new ServiceModelAdaptor());
 		ST st = group.getInstanceOf(template.template);
 		if (st == null) {

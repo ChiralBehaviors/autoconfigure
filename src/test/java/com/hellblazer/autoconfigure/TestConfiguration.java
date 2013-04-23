@@ -52,8 +52,7 @@ public class TestConfiguration {
 		List<ServiceCollection> serviceCollections = config.serviceCollections;
 		assertNotNull(serviceCollections);
 		assertEquals(1, serviceCollections.size());
-		ServiceCollection serviceCollection = serviceCollections
-				.get(0);
+		ServiceCollection serviceCollection = serviceCollections.get(0);
 		assertEquals(5, serviceCollection.cardinality);
 		assertEquals("service:iron:man", serviceCollection.service);
 		assertEquals(5, serviceCollection.cardinality);

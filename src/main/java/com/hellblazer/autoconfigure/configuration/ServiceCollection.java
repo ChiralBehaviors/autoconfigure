@@ -31,43 +31,16 @@ import com.hellblazer.slp.ServiceReference;
  */
 public class ServiceCollection {
 	public int cardinality = 0;
-	public String service = "service:someType:someProtocol";
 	public Map<String, String> properties = new HashMap<>();
+	public String service = "service:someType:someProtocol";
 	public String variable = "services";
 	private List<ServiceReference> discovered = new ArrayList<>();
-
-	public void discover(ServiceReference reference) {
-		discovered.add(reference);
-	}
-
-	public List<ServiceReference> getDiscovered() {
-		return discovered;
-	}
-
-	public String toString() {
-		return String.format("Service Collection [%s] [%s] properties %s",
-				cardinality, service, properties);
-	}
 
 	/**
 	 * @return the query filter for the service collection
 	 */
 	public String constructFilter() {
 		return AutoConfigure.constructFilter(service, properties);
-	}
-
-	/**
-	 * @return true if all the services have been discovered
-	 */
-	public boolean isSatisfied() {
-		return discovered.size() == cardinality;
-	}
-
-	/**
-	 * @return the number of services discovered for this collection
-	 */
-	public int getDiscoveredCardinality() {
-		return discovered.size();
 	}
 
 	/**
@@ -79,5 +52,33 @@ public class ServiceCollection {
 			services.add(new Service(service.getUrl(), service.getProperties()));
 		}
 		return services;
+	}
+
+	public void discover(ServiceReference reference) {
+		discovered.add(reference);
+	}
+
+	public List<ServiceReference> getDiscovered() {
+		return discovered;
+	}
+
+	/**
+	 * @return the number of services discovered for this collection
+	 */
+	public int getDiscoveredCardinality() {
+		return discovered.size();
+	}
+
+	/**
+	 * @return true if all the services have been discovered
+	 */
+	public boolean isSatisfied() {
+		return discovered.size() == cardinality;
+	}
+
+	@Override
+	public String toString() {
+		return String.format("Service Collection [%s] [%s] properties %s",
+				cardinality, service, properties);
 	}
 }
