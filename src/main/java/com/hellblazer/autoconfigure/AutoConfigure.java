@@ -91,21 +91,21 @@ public class AutoConfigure {
 	private final int addressIndex;
 	private final AtomicReference<InetSocketAddress> bound = new AtomicReference<>();
 	private final ServiceScope discovery;
+	private final Map<String, String> environment = new HashMap<>();
 	private final AtomicBoolean failed = new AtomicBoolean();
 	private final Map<String, File> generatedConfigurations = new HashMap<>();
 	private final String networkInterface;
 	private final Map<String, String> registeredServiceProperties = new HashMap<>();
 	private final AtomicReference<Rendezvous> rendezvous = new AtomicReference<>();
-	private final Map<String, String> environment = new HashMap<>();
 	private final Map<ServiceListener, ServiceCollection> serviceCollections = new HashMap<>();
-	private final Map<ServiceListener, SingletonService> singletonServices = new HashMap<>();
 	private final String serviceFormat;
 	private final Map<String, String> serviceProperties;
 	private final AtomicReference<UUID> serviceRegistration = new AtomicReference<>();
-	private final Map<String, String> variables;
+	private final Map<ServiceListener, SingletonService> singletonServices = new HashMap<>();
 	private final List<Template> templates;
 	private final AtomicReference<ServiceURL> thisService = new AtomicReference<>();
 	private final List<UniqueDirectory> uniqueDirectories;
+	private final Map<String, String> variables;
 	private final boolean verboseTemplating;
 
 	/**
@@ -293,37 +293,24 @@ public class AutoConfigure {
 	 * service being configured.
 	 */
 	protected void allocatePort() {
-		NetworkInterface iface;
-		try {
-			iface = NetworkInterface.getByName(networkInterface);
-		} catch (SocketException e) {
+		InetAddress address = determineHostAddress();
+		int port = Utils.allocatePort(address);
+		if (port <= 0) {
 			String msg = String.format(
-					"Unable to obtain network interface[%s]", networkInterface);
-			logger.log(Level.SEVERE, msg, e);
-			throw new IllegalStateException(msg, e);
-		}
-		if (iface == null) {
-			String msg = String.format("Unable to find network interface [%s]",
-					networkInterface);
+					"Unable to allocate port on address [%s]", address);
 			logger.severe(msg);
 			throw new IllegalStateException(msg);
 		}
-		try {
-			if (!iface.isUp()) {
-				String msg = String.format("Network interface [%s] is not up!",
-						networkInterface);
-				logger.severe(msg);
-				throw new IllegalStateException(msg);
-			}
-		} catch (SocketException e) {
-			String msg = String.format(
-					"Unable to determine if network interface [%s] is up",
-					networkInterface);
-			logger.severe(msg);
-			throw new IllegalStateException(msg);
-		}
-		logger.info(String.format("Network interface [%s] is up",
-				iface.getDisplayName()));
+		InetSocketAddress boundAddress = new InetSocketAddress(address, port);
+		logger.info(String.format("Binding this service to [%s]", boundAddress));
+		bound.set(boundAddress);
+	}
+
+	/**
+	 * @return the host address to bind this service to
+	 */
+	protected InetAddress determineHostAddress() {
+		NetworkInterface iface = determineNetworkInterface();
 		Enumeration<InetAddress> interfaceAddresses = iface.getInetAddresses();
 		InetAddress raw = null;
 		for (int i = 0; i <= addressIndex; i++) {
@@ -353,16 +340,58 @@ public class AutoConfigure {
 			logger.log(Level.SEVERE, msg, e);
 			throw new IllegalStateException(msg, e);
 		}
-		int port = Utils.allocatePort(address);
-		if (port <= 0) {
+		return address;
+	}
+
+	/** 
+	 * @return the network interface to bind this interface to.
+	 */
+	protected NetworkInterface determineNetworkInterface() {
+		NetworkInterface iface;
+		if (networkInterface == null) {
+			try {
+				iface = NetworkInterface.getByIndex(1);
+			} catch (SocketException e) {
+				String msg = String
+						.format("Unable to obtain default network interface");
+				logger.log(Level.SEVERE, msg, e);
+				throw new IllegalStateException(msg, e);
+			}
+		} else {
+			try {
+				iface = NetworkInterface.getByName(networkInterface);
+			} catch (SocketException e) {
+				String msg = String.format(
+						"Unable to obtain network interface[%s]",
+						networkInterface);
+				logger.log(Level.SEVERE, msg, e);
+				throw new IllegalStateException(msg, e);
+			}
+			if (iface == null) {
+				String msg = String.format(
+						"Unable to find network interface [%s]",
+						networkInterface);
+				logger.severe(msg);
+				throw new IllegalStateException(msg);
+			}
+		}
+		try {
+			if (!iface.isUp()) {
+				String msg = String.format("Network interface [%s] is not up!",
+						networkInterface);
+				logger.severe(msg);
+				throw new IllegalStateException(msg);
+			}
+		} catch (SocketException e) {
 			String msg = String.format(
-					"Unable to allocate port on address [%s]", address);
+					"Unable to determine if network interface [%s] is up",
+					networkInterface);
 			logger.severe(msg);
 			throw new IllegalStateException(msg);
 		}
-		InetSocketAddress boundAddress = new InetSocketAddress(address, port);
-		logger.info(String.format("Binding this service to [%s]", boundAddress));
-		bound.set(boundAddress);
+		logger.info(String.format("Network interface [%s] is up",
+				iface.getDisplayName()));
+		return iface;
 	}
 
 	/**
@@ -447,48 +476,6 @@ public class AutoConfigure {
 				failure.run(generatedConfigurations);
 			}
 		};
-	}
-
-	/**
-	 * @return the mapping of substitution variables used by the templates
-	 */
-	protected Map<String, Object> resolveVariables() {
-		Map<String, Object> resolvedVariables = new HashMap<>();
-
-		// Add any configured variables
-		resolvedVariables.putAll(variables);
-
-		// Add the generated directories
-		for (UniqueDirectory uDir : uniqueDirectories) {
-			try {
-				resolvedVariables.put(uDir.variable, uDir.resolve());
-			} catch (IOException e) {
-				String msg = String.format(
-						"Cannot create unique directory [%s]", uDir);
-				logger.log(Level.SEVERE, msg, e);
-				throw new IllegalStateException(msg, e);
-			}
-		}
-
-		// Register the service variables
-		for (SingletonService definition : singletonServices.values()) {
-			resolvedVariables.put(definition.variable,
-					definition.constructService());
-		}
-
-		// Register the service collection variables
-		for (ServiceCollection definition : serviceCollections.values()) {
-			resolvedVariables.put(definition.variable,
-					definition.constructServices());
-		}
-
-		// Finally, add any property overrides that were specified during the
-		// runtime call to configure.
-		resolvedVariables.putAll(environment);
-
-		logger.info(String.format("Using property substitions [%s]",
-				resolvedVariables));
-		return resolvedVariables;
 	}
 
 	/**
@@ -671,6 +658,48 @@ public class AutoConfigure {
 				throw new IllegalArgumentException(msg, e);
 			}
 		}
+	}
+
+	/**
+	 * @return the mapping of substitution variables used by the templates
+	 */
+	protected Map<String, Object> resolveVariables() {
+		Map<String, Object> resolvedVariables = new HashMap<>();
+
+		// Add any configured variables
+		resolvedVariables.putAll(variables);
+
+		// Add the generated directories
+		for (UniqueDirectory uDir : uniqueDirectories) {
+			try {
+				resolvedVariables.put(uDir.variable, uDir.resolve());
+			} catch (IOException e) {
+				String msg = String.format(
+						"Cannot create unique directory [%s]", uDir);
+				logger.log(Level.SEVERE, msg, e);
+				throw new IllegalStateException(msg, e);
+			}
+		}
+
+		// Register the service variables
+		for (SingletonService definition : singletonServices.values()) {
+			resolvedVariables.put(definition.variable,
+					definition.constructService());
+		}
+
+		// Register the service collection variables
+		for (ServiceCollection definition : serviceCollections.values()) {
+			resolvedVariables.put(definition.variable,
+					definition.constructServices());
+		}
+
+		// Finally, add any property overrides that were specified during the
+		// runtime call to configure.
+		resolvedVariables.putAll(environment);
+
+		logger.info(String.format("Using property substitions [%s]",
+				resolvedVariables));
+		return resolvedVariables;
 	}
 
 	/**
