@@ -18,8 +18,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.stringtemplate.v4.ST;
+import org.stringtemplate.v4.STGroup;
 
 import com.hellblazer.autoconfigure.Service;
+import com.hellblazer.autoconfigure.ServiceModelAdaptor;
 import com.hellblazer.autoconfigure.configuration.Template;
 
 /**
@@ -56,7 +58,18 @@ public class TemplateDebugger {
 		this.variables = variables;
 	}
 
-	public String render(ST template) {
+	/**
+	 * Render the named template in the template group, using the state of this
+	 * instance.
+	 * 
+	 * @param templateGroup
+	 * @param templateName
+	 * @return the rendered string of the template
+	 */
+	public String render(STGroup templateGroup, String templateName) {
+		templateGroup.registerModelAdaptor(Service.class,
+				new ServiceModelAdaptor());
+		ST template = templateGroup.getInstanceOf(templateName);
 		for (Map.Entry<String, String> entry : variables.entrySet()) {
 			try {
 				template.add(entry.getKey(), entry.getValue());
