@@ -1,7 +1,7 @@
 autoconfigure
 =============
 
-A simple auto configuration utility for dealing with the hell that is the current state of distributed systems
+A simple, non invasive auto configuration utility for dealing with the hell that is the current state of distributed systems
 
 License: Apache 2.0
 
