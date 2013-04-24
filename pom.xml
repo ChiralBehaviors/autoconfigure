@@ -7,6 +7,31 @@
 	<name>Autoconfigure</name>
 	<description>A simple way to configure the hell that is the current state of distributed systems</description>
 
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Hal Hildebrand</name>
+            <email>hal.hildebrand@me.com</email>
+            <organization>Hellbound Productions</organization>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>git://github.com/Hellblazer/autoconfigure.git</connection>
+        <url>https://github.com/Hellblazer/autoconfigure</url>
+    </scm>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.resources.sourceEncoding>UTF-8</project.resources.sourceEncoding>
+	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>log4j</groupId>
@@ -81,6 +106,12 @@
 			<artifactId>ST4</artifactId>
 			<version>4.0.7</version>
 		</dependency>
+		<dependency>
+			<groupId>net.gescobar</groupId>
+			<artifactId>jmx-annotations</artifactId>
+			<version>1.0.0</version>
+			<optional>true</optional>
+		</dependency>
 	</dependencies>
 
 	<repositories>
@@ -91,6 +122,10 @@
 		<repository>
 			<id>hellblazer-snapshots</id>
 			<url>https://repository-hal900000.forge.cloudbees.com/snapshot/</url>
+		</repository>
+		<repository>
+			<id>elibom</id>
+			<url>http://repository.elibom.net/nexus/content/repositories/releases</url>
 		</repository>
 	</repositories>
 

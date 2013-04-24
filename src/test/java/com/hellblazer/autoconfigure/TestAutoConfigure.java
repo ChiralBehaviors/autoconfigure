@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -149,6 +150,9 @@ public class TestAutoConfigure {
 			when(serviceUrl.getHost()).thenReturn(serviceHost);
 			when(serviceUrl.getPort()).thenReturn(servicePort);
 
+			Map<String, String> serviceProps1 = new HashMap<>();
+			serviceProps1.put(ServiceScope.SERVICE_REGISTRATION, UUID
+					.randomUUID().toString());
 			ServiceReference serviceCollection1Ref = mock(ServiceReference.class);
 			ServiceURL serviceCollection1Url = mock(ServiceURL.class);
 			when(serviceCollection1Url.getHost()).thenReturn(serviceHost);
@@ -156,6 +160,12 @@ public class TestAutoConfigure {
 					serviceCollection1Port);
 			when(serviceCollection1Ref.getUrl()).thenReturn(
 					serviceCollection1Url);
+			when(serviceCollection1Ref.getProperties()).thenReturn(
+					serviceProps1);
+
+			Map<String, String> serviceProps2 = new HashMap<>();
+			serviceProps2.put(ServiceScope.SERVICE_REGISTRATION, UUID
+					.randomUUID().toString());
 			ServiceReference serviceCollection2Ref = mock(ServiceReference.class);
 			ServiceURL serviceCollection2Url = mock(ServiceURL.class);
 			when(serviceCollection2Url.getHost()).thenReturn(serviceHost);
@@ -163,6 +173,8 @@ public class TestAutoConfigure {
 					serviceCollection2Port);
 			when(serviceCollection2Ref.getUrl()).thenReturn(
 					serviceCollection2Url);
+			when(serviceCollection2Ref.getProperties()).thenReturn(
+					serviceProps2);
 
 			AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
 					interfaceName, 0, serviceProperties, discovery,
