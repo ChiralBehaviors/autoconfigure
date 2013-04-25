@@ -1,117 +1,88 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.hellblazer</groupId>
-	<artifactId>autoconfigure</artifactId>
+	<groupId>com.hellblazer.autoconfigure</groupId>
+	<artifactId>autoconfigure.app</artifactId>
+	<packaging>pom</packaging>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>Autoconfigure</name>
+	<name>Autoconfigure Application</name>
 	<description>A simple way to configure the hell that is the current state of distributed systems</description>
 
-    <licenses>
-        <license>
-            <name>Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
-        </license>
-    </licenses>
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0</url>
+		</license>
+	</licenses>
 
-    <developers>
-        <developer>
-            <name>Hal Hildebrand</name>
-            <email>hal.hildebrand@me.com</email>
-            <organization>Hellbound Productions</organization>
-        </developer>
-    </developers>
+	<developers>
+		<developer>
+			<name>Hal Hildebrand</name>
+			<email>hal.hildebrand@me.com</email>
+			<organization>Hellbound Productions</organization>
+		</developer>
+	</developers>
 
-    <scm>
-        <connection>git://github.com/Hellblazer/autoconfigure.git</connection>
-        <url>https://github.com/Hellblazer/autoconfigure</url>
-    </scm>
+	<scm>
+		<connection>git://github.com/Hellblazer/autoconfigure.git</connection>
+		<url>https://github.com/Hellblazer/autoconfigure</url>
+	</scm>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.resources.sourceEncoding>UTF-8</project.resources.sourceEncoding>
 	</properties>
 
+	<modules>
+		<module>framework</module>
+		<module>template-debugger</module>
+	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.hellblazer</groupId>
+				<artifactId>utils</artifactId>
+				<version>0.0.1-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>com.hellblazer</groupId>
+				<artifactId>nexus</artifactId>
+				<version>1.0.1-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>junit</groupId>
+				<artifactId>junit</artifactId>
+				<version>4.11</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.dataformat</groupId>
+				<artifactId>jackson-dataformat-yaml</artifactId>
+				<version>2.1.4</version>
+				<optional>true</optional>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>2.1.4</version>
+				<optional>true</optional>
+			</dependency>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-all</artifactId>
+				<version>1.9.5</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.antlr</groupId>
+				<artifactId>ST4</artifactId>
+				<version>4.0.7</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
-		<dependency>
-			<groupId>log4j</groupId>
-			<artifactId>log4j</artifactId>
-			<version>1.2.15</version>
-			<exclusions>
-				<exclusion>
-					<artifactId>mail</artifactId>
-					<groupId>javax.mail</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>jmxri</artifactId>
-					<groupId>com.sun.jmx</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>jms</artifactId>
-					<groupId>javax.jms</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>jmxri</artifactId>
-					<groupId>com.sun.jmx</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>jmxtools</artifactId>
-					<groupId>com.sun.jdmk</groupId>
-				</exclusion>
-			</exclusions>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.hellblazer</groupId>
-			<artifactId>utils</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>com.hellblazer</groupId>
-			<artifactId>nexus</artifactId>
-			<version>1.0.1-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.11</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.dataformat</groupId>
-			<artifactId>jackson-dataformat-yaml</artifactId>
-			<version>2.1.4</version>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
-			<version>2.1.4</version>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-all</artifactId>
-			<version>1.9.5</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.zookeeper</groupId>
-			<artifactId>zookeeper</artifactId>
-			<version>3.4.5</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.antlr</groupId>
-			<artifactId>ST4</artifactId>
-			<version>4.0.7</version>
-		</dependency>
-		<dependency>
-			<groupId>net.gescobar</groupId>
-			<artifactId>jmx-annotations</artifactId>
-			<version>1.0.0</version>
-			<optional>true</optional>
-		</dependency>
 	</dependencies>
 
 	<repositories>
@@ -122,10 +93,6 @@
 		<repository>
 			<id>hellblazer-snapshots</id>
 			<url>https://repository-hal900000.forge.cloudbees.com/snapshot/</url>
-		</repository>
-		<repository>
-			<id>elibom</id>
-			<url>http://repository.elibom.net/nexus/content/repositories/releases</url>
 		</repository>
 	</repositories>
 

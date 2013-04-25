@@ -28,8 +28,8 @@ For snapshots, include the hellblazer snapshot repository:
 add as dependency:
 
     <dependency>
-        <groupId>com.hellblazer</groupId>
-        <artifactId>autoconfigure</artifactId>
+        <groupId>com.hellblazer.autoconfigure</groupId>
+        <artifactId>framework</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </dependency>
 
