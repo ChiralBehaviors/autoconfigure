@@ -1,0 +1,9 @@
+configuration(configuredService, cluster, myid, dataDirectory) ::=<<
+tickTime=2000
+dataDir=<dataDirectory>
+clientPort=<configuredService.port>
+initLimit=5
+syncLimit=2
+myid=<myid>
+<cluster:{ member |server.<member.id>=<member.host>:<member.port>:<member.electionPort><\n>}>
+>>

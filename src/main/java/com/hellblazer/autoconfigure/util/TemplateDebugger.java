@@ -14,12 +14,21 @@
  */
 package com.hellblazer.autoconfigure.util;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.stringtemplate.v4.ST;
-import org.stringtemplate.v4.STGroup;
+import org.stringtemplate.v4.STGroupFile;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.hellblazer.autoconfigure.Service;
 import com.hellblazer.autoconfigure.ServiceModelAdaptor;
 import com.hellblazer.autoconfigure.configuration.Template;
@@ -33,43 +42,54 @@ import com.hellblazer.autoconfigure.configuration.Template;
  */
 public class TemplateDebugger {
 
-	private final String configuredServiceVariable;
-	private final Service configuredService;
-	private final Map<String, Service> singletonServices;
-	private final Map<String, List<Service>> serviceCollections;
-	private final Map<String, String> variables;
-
-	public TemplateDebugger(Service configuredService,
-			Map<String, Service> singletonServices,
-			Map<String, List<Service>> serviceCollections,
-			Map<String, String> variables) {
-		this(Template.CONFIGURATION, configuredService, singletonServices,
-				serviceCollections, variables);
+	public static void main(String[] argv) throws JsonParseException,
+			JsonMappingException, IOException {
+		if (argv.length == 0) {
+			System.out.println("Usage: TemplateDebugger <scenario file>+");
+		}
+		ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+		for (String fileName : argv) {
+			FileInputStream yaml = new FileInputStream(fileName);
+			TemplateDebugger debugger = mapper.readValue(yaml,
+					TemplateDebugger.class);
+			System.out.println("======================================");
+			System.out.println(String.format("Rendered output of %s", yaml));
+			System.out.println("======================================");
+			System.out.println();
+			System.out.println(debugger.render());
+			System.out.println();
+			System.out.println("======================================");
+			System.out.println();
+			System.out.println();
+		}
 	}
 
-	public TemplateDebugger(String configuredServiceVariable,
-			Service configuredService, Map<String, Service> singletonServices,
-			Map<String, List<Service>> serviceCollections,
-			Map<String, String> variables) {
-		this.configuredServiceVariable = configuredServiceVariable;
-		this.configuredService = configuredService;
-		this.singletonServices = singletonServices;
-		this.serviceCollections = serviceCollections;
-		this.variables = variables;
-	}
+	@JsonProperty
+	private final Map<String, List<Map<String, String>>> serviceCollections = new HashMap<>();
+	@JsonProperty
+	private final Map<String, Map<String, String>> services = new HashMap<>();
+	@JsonProperty
+	private String templateGroupFile;
+	@JsonProperty
+	private String templateName = Template.CONFIGURATION;
+	@JsonProperty
+	private Map<String, String> variables = new HashMap<>();
 
 	/**
 	 * Render the named template in the template group, using the state of this
 	 * instance.
-	 * 
-	 * @param templateGroup
-	 * @param templateName
-	 * @return the rendered string of the template
 	 */
-	public String render(STGroup templateGroup, String templateName) {
+	public String render() {
+		STGroupFile templateGroup = new STGroupFile(templateGroupFile);
 		templateGroup.registerModelAdaptor(Service.class,
 				new ServiceModelAdaptor());
 		ST template = templateGroup.getInstanceOf(templateName);
+		if (template == null) {
+			throw new IllegalStateException(
+					String.format(
+							"The template named [%s] does not exist in the template group [%s]",
+							templateName, templateGroupFile));
+		}
 		for (Map.Entry<String, String> entry : variables.entrySet()) {
 			try {
 				template.add(entry.getKey(), entry.getValue());
@@ -77,25 +97,20 @@ public class TemplateDebugger {
 				// no parameter to this template
 			}
 		}
-		for (Map.Entry<String, Service> entry : singletonServices.entrySet()) {
+		for (Map.Entry<String, Map<String, String>> entry : services.entrySet()) {
 			try {
 				template.add(entry.getKey(), entry.getValue());
 			} catch (IllegalArgumentException e) {
 				// no parameter to this template
 			}
 		}
-		for (Map.Entry<String, List<Service>> entry : serviceCollections
+		for (Entry<String, List<Map<String, String>>> entry : serviceCollections
 				.entrySet()) {
 			try {
 				template.add(entry.getKey(), entry.getValue());
 			} catch (IllegalArgumentException e) {
 				// no parameter to this template
 			}
-		}
-		try {
-			template.add(configuredServiceVariable, configuredService);
-		} catch (IllegalArgumentException e) {
-			// no parameter to this template
 		}
 		return template.render();
 	}

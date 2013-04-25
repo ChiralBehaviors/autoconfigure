@@ -33,7 +33,7 @@ public class Configuration {
 	public List<ServiceCollection> serviceCollections = new ArrayList<>();
 	public Map<String, String> serviceProperties = new HashMap<>();
 	public List<SingletonService> services = new ArrayList<>();
-	public String serviceUrl = "service:someType:http:%s:%s/myURI";
+	public String serviceUrl = "service:someType:http://%s:%s/myURI";
 	public List<Template> templates = new ArrayList<>();
 	public String totalOrderingFrom = "services";
 	public String totalOrderingVariable = "id";

@@ -1,0 +1,8 @@
+tickTime=2000
+dataDir=
+clientPort=55678
+initLimit=5
+syncLimit=2
+myid=1
+server.1=hellblazer.com:53245:53327
+server.2=hellblazer.com:56341:44314

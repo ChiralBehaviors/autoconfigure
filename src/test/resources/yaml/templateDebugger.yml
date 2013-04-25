@@ -1,0 +1,39 @@
+
+templateName: configuration
+
+templateGroupFile: target/test-classes/configurations/templateDebugger.stg
+
+variables:
+    myid: 1
+
+services:
+    configuredService:
+        sd.service.type: service:zookeeper:tcp
+        host: hellblazer.com
+        port: 55678
+        electionPort: 54324
+    service1:
+        sd.service.type: service:account:http
+        sd.service.url.path: /services/account
+        host: hellblazer.com
+        port: 55678
+    service2:
+        sd.service.type: service:customer:http
+        sd.service.url.path: /services/customer
+        host: hellblazer.com
+        port: 54321
+        prop1: value1
+
+serviceCollections:
+    cluster:
+        - sd.service.type: service:zookeeper:tcp
+          host: hellblazer.com
+          port: 53245
+          electionPort: 53327
+          id: 1
+        - sd.service.type: service:zookeeper:tcp
+          host: hellblazer.com
+          port: 56341
+          id: 2
+          electionPort: 44314
+            
