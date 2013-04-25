@@ -18,17 +18,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.hellblazer.gossip.configuration.InetSocketAddressDeserializer;
-import com.hellblazer.gossip.configuration.TimeUnitDeserializer;
 
 /**
  * @author hhildebrand
@@ -49,10 +44,6 @@ public class YamlHelper {
 	}
 
 	public static Module getModule() {
-		SimpleModule module = new SimpleModule();
-		module.addDeserializer(InetSocketAddress.class,
-				new InetSocketAddressDeserializer());
-		module.addDeserializer(TimeUnit.class, new TimeUnitDeserializer());
-		return module;
+		return com.hellblazer.gossip.configuration.YamlHelper.getModule();
 	}
 }
