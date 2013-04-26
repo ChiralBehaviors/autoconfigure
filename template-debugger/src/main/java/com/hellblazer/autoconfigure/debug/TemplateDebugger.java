@@ -46,6 +46,7 @@ public class TemplateDebugger {
 			JsonMappingException, IOException {
 		if (argv.length == 0) {
 			System.out.println("Usage: TemplateDebugger <scenario file>+");
+			System.exit(1);
 		}
 		ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 		for (String fileName : argv) {

@@ -36,6 +36,7 @@
 	<modules>
 		<module>framework</module>
 		<module>template-debugger</module>
+		<module>wka</module>
 	</modules>
 
 	<dependencyManagement>
