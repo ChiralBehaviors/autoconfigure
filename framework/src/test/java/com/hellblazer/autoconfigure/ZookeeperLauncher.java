@@ -15,9 +15,7 @@
 package com.hellblazer.autoconfigure;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,8 +32,6 @@ import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.hellblazer.autoconfigure.configuration.Configuration;
-import com.hellblazer.autoconfigure.configuration.YamlHelper;
 
 /**
  * An example of using auto configuration to simplify the configuration of a
@@ -44,15 +40,27 @@ import com.hellblazer.autoconfigure.configuration.YamlHelper;
  * @author hhildebrand
  * 
  */
-public class ZookeeperLauncher {
+public class ZookeeperLauncher extends AutoConfigureService {
+	/**
+	 * @param string
+	 * @throws IOException
+	 * @throws JsonMappingException
+	 * @throws JsonParseException
+	 */
+	public ZookeeperLauncher(String fileName) throws JsonParseException,
+			JsonMappingException, IOException {
+		super(fileName);
+	}
+
 	public static void main(String[] argv) throws Exception {
-		if (argv.length != 1) {
-			System.err.println("ZookeeperLauncher <config file>");
+		if (argv.length != 2) {
+			System.err.println("ZookeeperLauncher <config file> <timeout>");
 			System.exit(1);
 			return;
 		}
-		ZookeeperLauncher launcher = new ZookeeperLauncher();
-		launcher.launch(new File(argv[0]));
+		ZookeeperLauncher launcher = new ZookeeperLauncher(argv[0]);
+		long timeout = Long.parseLong(argv[1]);
+		launcher.start(timeout, TimeUnit.SECONDS);
 	}
 
 	// Used in testing
@@ -71,45 +79,24 @@ public class ZookeeperLauncher {
 		return quorumPeer;
 	}
 
-	public void launch(File configFile) throws JsonParseException,
-			JsonMappingException, IOException {
-		InputStream fis = new FileInputStream(configFile);
-		final Configuration config = YamlHelper.fromYaml(fis);
-		fis.close();
-		AutoConfigure autoConfig = new AutoConfigure(config);
-		autoConfig.configure(successAction(), failureAction(), 60,
-				TimeUnit.SECONDS);
+	public void fail(Map<String, File> configurations) {
+		configurationCompleted.set(true);
+		success.set(false);
+		System.err.println("Auto configuration of Zookeeper failed");
 	}
 
-	private ConfigurationAction failureAction() {
-		return new ConfigurationAction() {
-			@Override
-			public void run(Map<String, File> configurations) {
-				configurationCompleted.set(true);
-				success.set(false);
-				System.err.println("Auto configuration of Zookeeper failed");
-			}
-		};
-	}
-
-	private ConfigurationAction successAction() {
-		return new ConfigurationAction() {
-			@Override
-			public void run(Map<String, File> configurations) {
-				String configurationFile = configurations.get("zookeeper")
-						.getAbsolutePath();
-				try {
-					initializeAndRun(new String[] { configurationFile });
-					configurationCompleted.set(true);
-					success.set(true);
-				} catch (Throwable e) {
-					throw new IllegalStateException(
-							String.format(
-									"Unable to start zookeeper using configuration file %s",
-									configurationFile), e);
-				}
-			}
-		};
+	public void succeed(Map<String, File> configurations) {
+		String configurationFile = configurations.get("zookeeper")
+				.getAbsolutePath();
+		try {
+			initializeAndRun(new String[] { configurationFile });
+			configurationCompleted.set(true);
+			success.set(true);
+		} catch (Throwable e) {
+			throw new IllegalStateException(String.format(
+					"Unable to start zookeeper using configuration file %s",
+					configurationFile), e);
+		}
 	}
 
 	/**

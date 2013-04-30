@@ -46,7 +46,8 @@ public class Configuration {
 	/**
 	 * Convienence method to construct an autoconfiguration instance.
 	 * 
-	 * @return an instance of Autoconfiguration constructed from this configuration
+	 * @return an instance of Autoconfiguration constructed from this
+	 *         configuration
 	 * @throws SocketException
 	 */
 	public AutoConfigure construct() throws SocketException {

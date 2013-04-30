@@ -122,28 +122,6 @@ public class TestAutoConfigure {
 			final AtomicBoolean completed = new AtomicBoolean();
 			final AtomicBoolean succeeded = new AtomicBoolean();
 			final AtomicReference<List<File>> transformedConfigurations = new AtomicReference<List<File>>();
-			ConfigurationAction success = new ConfigurationAction() {
-				@Override
-				public void run(Map<String, File> generatedConfigurations) {
-					List<File> configs = new ArrayList<>();
-					File generated = generatedConfigurations
-							.get("configuration1.properties");
-					configs.add(generated);
-					generated = generatedConfigurations
-							.get("configuration2.properties");
-					configs.add(generated);
-					transformedConfigurations.set(configs);
-					succeeded.set(true);
-					completed.set(true);
-				}
-			};
-			ConfigurationAction failure = new ConfigurationAction() {
-				@Override
-				public void run(Map<String, File> generatedConfigurations) {
-					succeeded.set(false);
-					completed.set(true);
-				}
-			};
 			ServiceReference serviceRef = mock(ServiceReference.class);
 			ServiceURL serviceUrl = mock(ServiceURL.class);
 			when(serviceRef.getUrl()).thenReturn(serviceUrl);
@@ -181,8 +159,31 @@ public class TestAutoConfigure {
 					serviceDefinitions, serviceCollectionDefinitions,
 					templates, substitutions, uniqueDirectories,
 					additionalPorts, null, null, true);
-			autoConfigure.configure(success, failure, 100,
-					TimeUnit.MILLISECONDS);
+			AutoConfigureService configuredService = new AutoConfigureService(
+					autoConfigure) {
+
+				@Override
+				public void fail(Map<String, File> configurations)
+						throws Exception {
+					succeeded.set(false);
+					completed.set(true);
+				}
+
+				@Override
+				public void succeed(Map<String, File> configurations)
+						throws Exception {
+					List<File> configs = new ArrayList<>();
+					File generated = configurations
+							.get("configuration1.properties");
+					configs.add(generated);
+					generated = configurations.get("configuration2.properties");
+					configs.add(generated);
+					transformedConfigurations.set(configs);
+					succeeded.set(true);
+					completed.set(true);
+				}
+			};
+			configuredService.start(100, TimeUnit.MILLISECONDS);
 			autoConfigure.discover(serviceRef, service);
 			autoConfigure.discover(serviceCollection1Ref, serviceCollection);
 			autoConfigure.discover(serviceCollection2Ref, serviceCollection);
@@ -223,7 +224,6 @@ public class TestAutoConfigure {
 			assertEquals("A", properties2.get("property.a"));
 		}
 	}
-	
 
 	@Test
 	public void testConfigurationProcessingFromResources() throws Exception {
@@ -248,66 +248,44 @@ public class TestAutoConfigure {
 
 			Map<String, String> serviceProperties = new HashMap<String, String>();
 			List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
-			
+
 			SingletonService service = new SingletonService();
 			service.service = "service:testService:tcp";
 			service.variable = serviceVariable;
 			List<SingletonService> serviceDefinitions = new ArrayList<>();
 			serviceDefinitions.add(service);
-			
+
 			ServiceCollection serviceCollection = new ServiceCollection();
 			serviceCollection.service = "service:testServiceCollection:tcp";
 			serviceCollection.cardinality = 2;
 			serviceCollection.variable = serviceCollectionVariable;
 			List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
 			serviceCollectionDefinitions.add(serviceCollection);
-			
-			List<Template> templates = new ArrayList<>(); 
+
+			List<Template> templates = new ArrayList<>();
 			Template template1 = new Template();
 			template1.name = "configuration1.properties";
 			template1.templateGroup = "configurations/configuration1.stg";
 			template1.generated = new File(tempDirectory.directory,
 					template1.name);
 			templates.add(template1);
-			
+
 			Template template2 = new Template();
 			template2.name = "configuration2.properties";
 			template2.templateGroup = "configurations/configuration2.stg";
 			template2.generated = new File(tempDirectory.directory,
 					template2.name);
 			templates.add(template2);
-			
+
 			List<String> additionalPorts = new ArrayList<>();
-			
+
 			Map<String, String> substitutions = new HashMap<>();
 			substitutions.put("a", "A");
 			substitutions.put("b", "B");
-			
+
 			final AtomicBoolean completed = new AtomicBoolean();
 			final AtomicBoolean succeeded = new AtomicBoolean();
 			final AtomicReference<List<File>> transformedConfigurations = new AtomicReference<List<File>>();
-			ConfigurationAction success = new ConfigurationAction() {
-				@Override
-				public void run(Map<String, File> generatedConfigurations) {
-					List<File> configs = new ArrayList<>();
-					File generated = generatedConfigurations
-							.get("configuration1.properties");
-					configs.add(generated);
-					generated = generatedConfigurations
-							.get("configuration2.properties");
-					configs.add(generated);
-					transformedConfigurations.set(configs);
-					succeeded.set(true);
-					completed.set(true);
-				}
-			};
-			ConfigurationAction failure = new ConfigurationAction() {
-				@Override
-				public void run(Map<String, File> generatedConfigurations) {
-					succeeded.set(false);
-					completed.set(true);
-				}
-			};
 			ServiceReference serviceRef = mock(ServiceReference.class);
 			ServiceURL serviceUrl = mock(ServiceURL.class);
 			when(serviceRef.getUrl()).thenReturn(serviceUrl);
@@ -345,8 +323,31 @@ public class TestAutoConfigure {
 					serviceDefinitions, serviceCollectionDefinitions,
 					templates, substitutions, uniqueDirectories,
 					additionalPorts, null, null, true);
-			autoConfigure.configure(success, failure, 100,
-					TimeUnit.MILLISECONDS);
+			AutoConfigureService configuredService = new AutoConfigureService(
+					autoConfigure) {
+
+				@Override
+				public void succeed(Map<String, File> configurations)
+						throws Exception {
+					List<File> configs = new ArrayList<>();
+					File generated = configurations
+							.get("configuration1.properties");
+					configs.add(generated);
+					generated = configurations.get("configuration2.properties");
+					configs.add(generated);
+					transformedConfigurations.set(configs);
+					succeeded.set(true);
+					completed.set(true);
+				}
+
+				@Override
+				public void fail(Map<String, File> configurations)
+						throws Exception {
+					succeeded.set(false);
+					completed.set(true);
+				}
+			};
+			configuredService.start(100, TimeUnit.MILLISECONDS);
 			autoConfigure.discover(serviceRef, service);
 			autoConfigure.discover(serviceCollection1Ref, serviceCollection);
 			autoConfigure.discover(serviceCollection2Ref, serviceCollection);
@@ -405,21 +406,23 @@ public class TestAutoConfigure {
 				true);
 		final AtomicBoolean succeeded = new AtomicBoolean();
 		final AtomicBoolean completed = new AtomicBoolean();
-		ConfigurationAction success = new ConfigurationAction() {
+		AutoConfigureService configuredService = new AutoConfigureService(
+				autoConfigure) {
+
 			@Override
-			public void run(Map<String, File> generatedConfigurations) {
+			public void succeed(Map<String, File> configurations)
+					throws Exception {
 				succeeded.set(true);
 				completed.set(true);
 			}
-		};
-		ConfigurationAction failure = new ConfigurationAction() {
+
 			@Override
-			public void run(Map<String, File> generatedConfigurations) {
+			public void fail(Map<String, File> configurations) throws Exception {
 				succeeded.set(false);
 				completed.set(true);
 			}
 		};
-		autoConfigure.configure(success, failure, 10, TimeUnit.MILLISECONDS);
+		configuredService.start(10, TimeUnit.MILLISECONDS);
 		assertTrue("configuration did not complete",
 				Utils.waitForCondition(1000, new Condition() {
 					@Override
@@ -463,27 +466,28 @@ public class TestAutoConfigure {
 		when(serviceCollectionUrl.getPort()).thenReturn(2);
 		when(serviceCollectionRef.getUrl()).thenReturn(serviceCollectionUrl);
 
-		ConfigurationAction success = new ConfigurationAction() {
-			@Override
-			public void run(Map<String, File> generatedConfigurations) {
-				succeeded.set(true);
-				completed.set(true);
-			}
-		};
-		ConfigurationAction failure = new ConfigurationAction() {
-			@Override
-			public void run(Map<String, File> generatedConfigurations) {
-				succeeded.set(false);
-				completed.set(true);
-			}
-		};
-
 		AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
 				interfaceName, 0, serviceProperties, discovery,
 				serviceDefinitions, serviceCollectionDefinitions, templates,
 				substitutions, uniqueDirectories, additionalPorts, null, null,
 				true);
-		autoConfigure.configure(success, failure, 100, TimeUnit.MILLISECONDS);
+		AutoConfigureService configuredService = new AutoConfigureService(
+				autoConfigure) {
+
+			@Override
+			public void succeed(Map<String, File> configurations)
+					throws Exception {
+				succeeded.set(true);
+				completed.set(true);
+			}
+
+			@Override
+			public void fail(Map<String, File> configurations) throws Exception {
+				succeeded.set(false);
+				completed.set(true);
+			}
+		};
+		configuredService.start(100, TimeUnit.MILLISECONDS);
 		autoConfigure.discover(serviceRef, service);
 		autoConfigure.discover(serviceCollectionRef, serviceCollection);
 		assertTrue("configuration did not complete",

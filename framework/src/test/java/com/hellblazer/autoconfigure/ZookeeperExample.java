@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -48,8 +49,6 @@ public class ZookeeperExample {
 		Gossip gossipSeed = new GossipConfiguration().construct();
 		InetSocketAddress gossipSeedAddress = gossipSeed.getLocalAddress();
 		gossipSeed.start();
-		final ZookeeperLauncher launcher1 = new ZookeeperLauncher();
-		final ZookeeperLauncher launcher2 = new ZookeeperLauncher();
 
 		try (TemporaryDirectory dir1 = new TemporaryDirectory(
 				"functional-test-1-", ".dir", new File("").getAbsoluteFile());
@@ -62,26 +61,20 @@ public class ZookeeperExample {
 					"autoconfigure.yml").getAbsoluteFile();
 			initializeDirectories(gossipSeedAddress, dir1.directory,
 					dir2.directory, autoconfig1, autoconfig2);
+			final ZookeeperLauncher launcher1 = new ZookeeperLauncher(
+					autoconfig1.getAbsolutePath());
+			final ZookeeperLauncher launcher2 = new ZookeeperLauncher(
+					autoconfig2.getAbsolutePath());
 			Thread daemon1 = new Thread(new Runnable() {
 				@Override
 				public void run() {
-					try {
-						launcher1.launch(autoconfig1);
-					} catch (IOException e) {
-						throw new IllegalStateException(
-								"Unable to configure zookeeper 1", e);
-					}
+					launcher1.start(200, TimeUnit.SECONDS);
 				};
 			}, "Zookeeper 1 launcher");
 			Thread daemon2 = new Thread(new Runnable() {
 				@Override
 				public void run() {
-					try {
-						launcher2.launch(autoconfig2);
-					} catch (IOException e) {
-						throw new IllegalStateException(
-								"Unable to configure zookeeper 2", e);
-					}
+					launcher2.start(200, TimeUnit.SECONDS);
 				};
 			}, "Zookeeper 2 launcher");
 			daemon1.start();
@@ -143,13 +136,6 @@ public class ZookeeperExample {
 						}
 					}));
 			System.out.println("Everything is hunky dory");
-		} finally {
-			if (launcher1.getQuorumPeer() != null) {
-				launcher1.getQuorumPeer().shutdown();
-			}
-			if (launcher2.getQuorumPeer() != null) {
-				launcher2.getQuorumPeer().shutdown();
-			}
 		}
 	}
 

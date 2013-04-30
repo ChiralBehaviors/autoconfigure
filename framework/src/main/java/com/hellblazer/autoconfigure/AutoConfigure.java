@@ -24,6 +24,7 @@ import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -213,29 +214,25 @@ public class AutoConfigure {
 	/**
 	 * Run the auto configuration process.
 	 * 
-	 * @param success
-	 *            - the closure to evaluate upon successful auto configuration
-	 * @param failure
-	 *            - the closure to evaluate upon failure to auto configure
+	 * @param configuredService
+	 *            - the service instance being configured
 	 * @param timeout
 	 *            - the length of time to wait for auto configuration to
 	 *            complete
 	 * @param unit
 	 *            - the unit of the wait time
 	 */
-	public void configure(ConfigurationAction success,
-			ConfigurationAction failure, long timeout, TimeUnit unit) {
-		configure(new HashMap<String, String>(), success, failure, timeout,
+	public void configure(AutoConfigureService configuredService, long timeout,
+			TimeUnit unit) {
+		configure(new HashMap<String, String>(), configuredService, timeout,
 				unit);
 	}
 
 	/**
 	 * Run the auto configuration process.
 	 * 
-	 * @param success
-	 *            - the closure to evaluate upon successful auto configuration
-	 * @param failure
-	 *            - the closure to evaluate upon failure to auto configure
+	 * @param configuredService
+	 *            - the service instance being configured
 	 * @param timeout
 	 *            - the length of time to wait for auto configuration to
 	 *            complete
@@ -245,16 +242,18 @@ public class AutoConfigure {
 	 *            - a map of variables that override any configured variables
 	 */
 	public void configure(Map<String, String> environment,
-			ConfigurationAction success, ConfigurationAction failure,
-			long timeout, TimeUnit unit) {
+			AutoConfigureService configuredService, long timeout, TimeUnit unit) {
+		if (environment == null) {
+			environment = Collections.emptyMap();
+		}
 		this.environment.putAll(environment);
 		logger.info(String.format("Using runtime property overrides %s",
 				environment));
 		logger.info("Beginning auto configuration process");
-		Runnable successAction = successAction(success, failure);
+		Runnable successAction = successAction(configuredService);
 		int cardinality = getCardinality();
 		if (!rendezvous.compareAndSet(null, new Rendezvous(cardinality,
-				successAction, failureAction(failure)))) {
+				successAction, failureAction(configuredService)))) {
 			throw new IllegalStateException("System is already configuring!");
 		}
 		try {
@@ -262,7 +261,14 @@ public class AutoConfigure {
 		} catch (Throwable e) {
 			logger.log(Level.SEVERE, "Unable to register this service!", e);
 			failed.set(true);
-			failure.run(generatedConfigurations);
+			try {
+				configuredService.fail(generatedConfigurations);
+			} catch (Exception e1) {
+				logger.log(
+						Level.INFO,
+						"Exception encountered during the running failure action",
+						e);
+			}
 			return;
 		}
 
@@ -286,7 +292,14 @@ public class AutoConfigure {
 			logger.log(Level.SEVERE, "Error registering service listeners", e);
 			failed.set(true);
 			rendezvous.get().cancel();
-			failure.run(generatedConfigurations);
+			try {
+				configuredService.fail(generatedConfigurations);
+			} catch (Exception e1) {
+				logger.log(
+						Level.INFO,
+						"Exception encountered during the running failure action",
+						e);
+			}
 		}
 	}
 
@@ -458,7 +471,8 @@ public class AutoConfigure {
 	 * 
 	 * @return the action to run on failure
 	 */
-	protected Runnable failureAction(final ConfigurationAction failure) {
+	protected Runnable failureAction(
+			final AutoConfigureService configuredService) {
 		return new Runnable() {
 			@Override
 			public void run() {
@@ -486,7 +500,13 @@ public class AutoConfigure {
 										cardinality));
 					}
 				}
-				failure.run(generatedConfigurations);
+				try {
+					configuredService.fail(generatedConfigurations);
+				} catch (Exception e) {
+					logger.severe(String.format(
+							"Configured service had a sad %s",
+							configuredService));
+				}
 			}
 		};
 	}
@@ -821,8 +841,8 @@ public class AutoConfigure {
 	 * @param failure
 	 * @return the action to run upon successful configuration
 	 */
-	protected Runnable successAction(final ConfigurationAction success,
-			final ConfigurationAction failure) {
+	protected Runnable successAction(
+			final AutoConfigureService configuredService) {
 		return new Runnable() {
 			@Override
 			public void run() {
@@ -836,12 +856,19 @@ public class AutoConfigure {
 					logger.log(Level.SEVERE, "Error processing configurations",
 							e);
 					failed.set(true);
-					failure.run(generatedConfigurations);
+					try {
+						configuredService.fail(generatedConfigurations);
+					} catch (Exception e1) {
+						logger.log(
+								Level.INFO,
+								"Exception encountered during the running failure action",
+								e1);
+					}
 					return;
 				}
 				logger.info("Auto configuration successfully completed, running success action");
 				try {
-					success.run(generatedConfigurations);
+					configuredService.succeed(generatedConfigurations);
 					logger.info("Success action completed");
 				} catch (Throwable e) {
 					logger.log(
@@ -850,9 +877,16 @@ public class AutoConfigure {
 							e);
 					failed.set(true);
 					logger.info("Running failure action");
-					failure.run(generatedConfigurations);
+					try {
+						configuredService.fail(generatedConfigurations);
+					} catch (Exception e1) {
+						logger.log(
+								Level.INFO,
+								"Exception encountered during the running failure action",
+								e1);
+					}
 				}
 			}
 		};
-	}
+	};
 }
