@@ -330,7 +330,7 @@ public class AutoConfigure {
 			if (!interfaceAddresses.hasMoreElements()) {
 				String msg = String
 						.format("Unable to find any network address for interface[%s] {%s}",
-								networkInterface, iface.getDisplayName());
+								iface.getName(), iface.getDisplayName());
 				logger.severe(msg);
 				throw new IllegalStateException(msg);
 			}
@@ -339,7 +339,7 @@ public class AutoConfigure {
 		if (raw == null) {
 			String msg = String
 					.format("Unable to find any network address for interface[%s] {%s}",
-							networkInterface, iface.getDisplayName());
+							iface.getName(), iface.getDisplayName());
 			logger.severe(msg);
 			throw new IllegalStateException(msg);
 		}
@@ -349,7 +349,7 @@ public class AutoConfigure {
 		} catch (UnknownHostException e) {
 			String msg = String
 					.format("Unable to resolve network address [%s] for interface[%s] {%s}",
-							raw, networkInterface, iface.getDisplayName());
+							raw, iface.getName(), iface.getDisplayName());
 			logger.log(Level.SEVERE, msg, e);
 			throw new IllegalStateException(msg, e);
 		}
@@ -391,14 +391,14 @@ public class AutoConfigure {
 		try {
 			if (!iface.isUp()) {
 				String msg = String.format("Network interface [%s] is not up!",
-						networkInterface);
+						iface.getName());
 				logger.severe(msg);
 				throw new IllegalStateException(msg);
 			}
 		} catch (SocketException e) {
 			String msg = String.format(
 					"Unable to determine if network interface [%s] is up",
-					networkInterface);
+					iface.getName());
 			logger.severe(msg);
 			throw new IllegalStateException(msg);
 		}
@@ -503,8 +503,7 @@ public class AutoConfigure {
 	 */
 	protected void generate(Template template, Service thisService,
 			Map<String, Object> variables) {
-		STGroupFile group = new STGroupFile(
-				template.templateGroup.getAbsolutePath());
+		STGroupFile group = new STGroupFile(template.templateGroup);
 		STGroup.verbose = verboseTemplating;
 		STGroup.trackCreationEvents = verboseTemplating;
 		group.registerModelAdaptor(Service.class, new ServiceModelAdaptor());
@@ -512,8 +511,7 @@ public class AutoConfigure {
 		if (st == null) {
 			String msg = String
 					.format("Cannot retrieve template [%s] from template group file [%s]",
-							template.template,
-							template.templateGroup.getAbsolutePath());
+							template.template, template.templateGroup);
 			logger.log(Level.SEVERE, msg);
 			throw new IllegalStateException(msg);
 		}
@@ -544,7 +542,7 @@ public class AutoConfigure {
 			String msg = String
 					.format("Cannot write generated configuration file[%s] for templateGroup [%s]",
 							template.generated.getAbsolutePath(),
-							template.templateGroup.getAbsolutePath());
+							template.templateGroup);
 			logger.log(Level.SEVERE, msg, e);
 			throw new IllegalStateException(msg, e);
 		}
@@ -558,12 +556,6 @@ public class AutoConfigure {
 				registeredServiceProperties);
 		Map<String, Object> variables = resolveVariables();
 		for (Template template : templates) {
-			if (!template.templateGroup.exists()) {
-				String msg = String.format("missing template group file [%s]",
-						template.templateGroup.getAbsolutePath());
-				logger.severe(msg);
-				throw new IllegalStateException(msg);
-			}
 			generate(template, model, variables);
 		}
 	}

@@ -29,7 +29,7 @@ public class Configuration {
 	public List<String> additionalPorts = new ArrayList<>();
 	public int addressIndex = 0;
 	public GossipConfiguration gossip = new GossipConfiguration();
-	public String networkInterface = "eth0";
+	public String networkInterface = null;
 	public List<ServiceCollection> serviceCollections = new ArrayList<>();
 	public Map<String, String> serviceProperties = new HashMap<>();
 	public List<SingletonService> services = new ArrayList<>();

@@ -42,6 +42,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.stringtemplate.v4.STGroupFile;
 
 import com.hellblazer.autoconfigure.configuration.ServiceCollection;
 import com.hellblazer.autoconfigure.configuration.SingletonService;
@@ -110,7 +111,7 @@ public class TestAutoConfigure {
 				Template template = new Template();
 				template.name = String.format("%s.properties",
 						Utils.getNameWithoutExtension(config));
-				template.templateGroup = config;
+				template.templateGroup = config.getAbsolutePath();
 				template.generated = new File(tempDirectory.directory,
 						template.name);
 				templates.add(template);
@@ -119,6 +120,170 @@ public class TestAutoConfigure {
 			Map<String, String> substitutions = new HashMap<>();
 			substitutions.put("a", "A");
 			substitutions.put("b", "B");
+			final AtomicBoolean completed = new AtomicBoolean();
+			final AtomicBoolean succeeded = new AtomicBoolean();
+			final AtomicReference<List<File>> transformedConfigurations = new AtomicReference<List<File>>();
+			ConfigurationAction success = new ConfigurationAction() {
+				@Override
+				public void run(Map<String, File> generatedConfigurations) {
+					List<File> configs = new ArrayList<>();
+					File generated = generatedConfigurations
+							.get("configuration1.properties");
+					configs.add(generated);
+					generated = generatedConfigurations
+							.get("configuration2.properties");
+					configs.add(generated);
+					transformedConfigurations.set(configs);
+					succeeded.set(true);
+					completed.set(true);
+				}
+			};
+			ConfigurationAction failure = new ConfigurationAction() {
+				@Override
+				public void run(Map<String, File> generatedConfigurations) {
+					succeeded.set(false);
+					completed.set(true);
+				}
+			};
+			ServiceReference serviceRef = mock(ServiceReference.class);
+			ServiceURL serviceUrl = mock(ServiceURL.class);
+			when(serviceRef.getUrl()).thenReturn(serviceUrl);
+			when(serviceUrl.getHost()).thenReturn(serviceHost);
+			when(serviceUrl.getPort()).thenReturn(servicePort);
+
+			Map<String, String> serviceProps1 = new HashMap<>();
+			serviceProps1.put(ServiceScope.SERVICE_REGISTRATION, UUID
+					.randomUUID().toString());
+			ServiceReference serviceCollection1Ref = mock(ServiceReference.class);
+			ServiceURL serviceCollection1Url = mock(ServiceURL.class);
+			when(serviceCollection1Url.getHost()).thenReturn(serviceHost);
+			when(serviceCollection1Url.getPort()).thenReturn(
+					serviceCollection1Port);
+			when(serviceCollection1Ref.getUrl()).thenReturn(
+					serviceCollection1Url);
+			when(serviceCollection1Ref.getProperties()).thenReturn(
+					serviceProps1);
+
+			Map<String, String> serviceProps2 = new HashMap<>();
+			serviceProps2.put(ServiceScope.SERVICE_REGISTRATION, UUID
+					.randomUUID().toString());
+			ServiceReference serviceCollection2Ref = mock(ServiceReference.class);
+			ServiceURL serviceCollection2Url = mock(ServiceURL.class);
+			when(serviceCollection2Url.getHost()).thenReturn(serviceHost);
+			when(serviceCollection2Url.getPort()).thenReturn(
+					serviceCollection2Port);
+			when(serviceCollection2Ref.getUrl()).thenReturn(
+					serviceCollection2Url);
+			when(serviceCollection2Ref.getProperties()).thenReturn(
+					serviceProps2);
+
+			AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
+					interfaceName, 0, serviceProperties, discovery,
+					serviceDefinitions, serviceCollectionDefinitions,
+					templates, substitutions, uniqueDirectories,
+					additionalPorts, null, null, true);
+			autoConfigure.configure(success, failure, 100,
+					TimeUnit.MILLISECONDS);
+			autoConfigure.discover(serviceRef, service);
+			autoConfigure.discover(serviceCollection1Ref, serviceCollection);
+			autoConfigure.discover(serviceCollection2Ref, serviceCollection);
+			assertTrue("configuration did not complete",
+					Utils.waitForCondition(1000, new Condition() {
+						@Override
+						public boolean isTrue() {
+							return completed.get();
+						}
+					}));
+			assertTrue("configuration not successful", succeeded.get());
+			assertNotNull(transformedConfigurations.get());
+			assertEquals(2, transformedConfigurations.get().size());
+			Properties properties1 = new Properties();
+			File configuration1 = transformedConfigurations.get().get(0);
+			assertNotNull("Configuration 1 was not generated", configuration1);
+			assertTrue("configuration 1 does not exist",
+					configuration1.exists());
+			FileInputStream is = new FileInputStream(configuration1);
+			properties1.load(is);
+			is.close();
+			Properties properties2 = new Properties();
+			File configuration2 = transformedConfigurations.get().get(1);
+			assertNotNull("Configuration 2 was not generated", configuration2);
+			assertTrue("configuration 2 does not exist",
+					configuration2.exists());
+			is = new FileInputStream(configuration2);
+			properties2.load(is);
+			is.close();
+			InetSocketAddress bound = autoConfigure.getBound();
+			assertEquals(bound.getHostName(), properties1.get(hostVariable));
+			assertEquals(String.valueOf(bound.getPort()),
+					properties1.get(portVariable));
+			assertEquals("B", properties1.get("property.b"));
+			assertEquals(serviceCollectionConfig,
+					properties2.get(serviceCollectionVariable));
+			assertEquals(serviceConfig, properties2.get(serviceVariable));
+			assertEquals("A", properties2.get("property.a"));
+		}
+	}
+	
+
+	@Test
+	public void testConfigurationProcessingFromResources() throws Exception {
+		try (TemporaryDirectory tempDirectory = new TemporaryDirectory(
+				"config-processing", "dir")) {
+			Utils.copyDirectory(new File("src/test/resources/configurations"),
+					tempDirectory.directory);
+			String serviceHost = "example.com";
+			int servicePort = 1;
+			int serviceCollection1Port = 2;
+			int serviceCollection2Port = 2;
+			String serviceFormat = "service:test:tcp://%s:%s";
+			String hostVariable = "host";
+			String portVariable = "port";
+			String serviceCollectionVariable = "serviceCollection";
+			String serviceVariable = "service";
+			String serviceCollectionConfig = String.format("%s:%s,%s:%s,",
+					serviceHost, serviceCollection1Port, serviceHost,
+					serviceCollection2Port);
+			String serviceConfig = String.format("%s:%s", serviceHost,
+					servicePort);
+
+			Map<String, String> serviceProperties = new HashMap<String, String>();
+			List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
+			
+			SingletonService service = new SingletonService();
+			service.service = "service:testService:tcp";
+			service.variable = serviceVariable;
+			List<SingletonService> serviceDefinitions = new ArrayList<>();
+			serviceDefinitions.add(service);
+			
+			ServiceCollection serviceCollection = new ServiceCollection();
+			serviceCollection.service = "service:testServiceCollection:tcp";
+			serviceCollection.cardinality = 2;
+			serviceCollection.variable = serviceCollectionVariable;
+			List<ServiceCollection> serviceCollectionDefinitions = new ArrayList<>();
+			serviceCollectionDefinitions.add(serviceCollection);
+			
+			List<Template> templates = new ArrayList<>(); 
+			Template template1 = new Template();
+			template1.name = "configuration1.properties";
+			template1.templateGroup = "configurations/configuration1.stg";
+			template1.generated = new File(tempDirectory.directory,
+					template1.name);
+			templates.add(template1);
+			
+			Template template2 = new Template();
+			template2.name = "configuration2.properties";
+			template2.templateGroup = "configurations/configuration2.stg";
+			template2.generated = new File(tempDirectory.directory,
+					template2.name);
+			templates.add(template2);
+			
+			List<String> additionalPorts = new ArrayList<>();
+			
+			Map<String, String> substitutions = new HashMap<>();
+			substitutions.put("a", "A");
+			substitutions.put("b", "B");
+			
 			final AtomicBoolean completed = new AtomicBoolean();
 			final AtomicBoolean succeeded = new AtomicBoolean();
 			final AtomicReference<List<File>> transformedConfigurations = new AtomicReference<List<File>>();
