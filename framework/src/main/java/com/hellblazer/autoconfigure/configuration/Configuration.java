@@ -14,11 +14,13 @@
  */
 package com.hellblazer.autoconfigure.configuration;
 
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.hellblazer.autoconfigure.AutoConfigure;
 import com.hellblazer.gossip.configuration.GossipConfiguration;
 
 /**
@@ -40,4 +42,14 @@ public class Configuration {
 	public List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 	public Map<String, String> variables = new HashMap<>();
 	public boolean verboseTemplating = false;
+
+	/**
+	 * Convienence method to construct an autoconfiguration instance.
+	 * 
+	 * @return an instance of Autoconfiguration constructed from this configuration
+	 * @throws SocketException
+	 */
+	public AutoConfigure construct() throws SocketException {
+		return new AutoConfigure(this);
+	}
 }

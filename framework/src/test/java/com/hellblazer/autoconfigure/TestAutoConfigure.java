@@ -42,7 +42,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.stringtemplate.v4.STGroupFile;
 
 import com.hellblazer.autoconfigure.configuration.ServiceCollection;
 import com.hellblazer.autoconfigure.configuration.SingletonService;
