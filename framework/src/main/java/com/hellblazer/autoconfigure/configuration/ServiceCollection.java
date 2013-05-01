@@ -36,8 +36,8 @@ public class ServiceCollection {
 	public int cardinality = 0;
 	public String idProperty = "totalOrderingIndex";
 	public Map<String, String> properties = new HashMap<>();
-	public String service = "service:someType:someProtocol";
-	public String variable = "services";
+	public String service;
+	public String variable;
 	private List<Service> discovered = new ArrayList<>();
 
 	/**

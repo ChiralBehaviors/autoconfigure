@@ -30,8 +30,8 @@ import com.hellblazer.slp.ServiceReference;
 public class SingletonService {
 	public Map<String, String> properties = new HashMap<>();
 
-	public String service = "service:someType:someProtocol";
-	public String variable = "service";
+	public String service;
+	public String variable;
 	private volatile ServiceReference discovered;
 
 	/**
