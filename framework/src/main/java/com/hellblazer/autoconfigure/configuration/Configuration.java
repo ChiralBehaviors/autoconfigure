@@ -31,14 +31,14 @@ public class Configuration {
 	public List<String> additionalPorts = new ArrayList<>();
 	public int addressIndex = 0;
 	public GossipConfiguration gossip = new GossipConfiguration();
-	public String networkInterface = null;
+	public String networkInterface;
 	public List<ServiceCollection> serviceCollections = new ArrayList<>();
 	public Map<String, String> serviceProperties = new HashMap<>();
 	public List<SingletonService> services = new ArrayList<>();
-	public String serviceUrl = "service:someType:http://%s:%s/myURI";
+	public String serviceUrl;
 	public List<Template> templates = new ArrayList<>();
-	public String totalOrderingFrom = "services";
-	public String totalOrderingVariable = "id";
+	public String totalOrderingFrom;
+	public String totalOrderingVariable;
 	public List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
 	public Map<String, String> variables = new HashMap<>();
 	public boolean verboseTemplating = false;
