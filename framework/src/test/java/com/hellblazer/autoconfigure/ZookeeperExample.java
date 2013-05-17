@@ -68,19 +68,19 @@ public class ZookeeperExample {
 			Thread daemon1 = new Thread(new Runnable() {
 				@Override
 				public void run() {
-					launcher1.start(200, TimeUnit.SECONDS);
+					launcher1.start(300, TimeUnit.SECONDS);
 				};
 			}, "Zookeeper 1 launcher");
 			Thread daemon2 = new Thread(new Runnable() {
 				@Override
 				public void run() {
-					launcher2.start(200, TimeUnit.SECONDS);
+					launcher2.start(300, TimeUnit.SECONDS);
 				};
 			}, "Zookeeper 2 launcher");
 			daemon1.start();
 			daemon2.start();
 			assertTrue("Zookeeper 1 did not complete configuration",
-					Utils.waitForCondition(60 * 1000, new Condition() {
+					Utils.waitForCondition(120 * 1000, new Condition() {
 						@Override
 						public boolean isTrue() {
 							return launcher1.configurationCompleted.get();
@@ -89,7 +89,7 @@ public class ZookeeperExample {
 			assertTrue("Zookeeper 1 did not launch successfully",
 					launcher1.success.get());
 			assertTrue("Zookeeper 2 did not complete configuration",
-					Utils.waitForCondition(60 * 1000, new Condition() {
+					Utils.waitForCondition(120 * 1000, new Condition() {
 						@Override
 						public boolean isTrue() {
 							return launcher2.configurationCompleted.get();
@@ -100,7 +100,7 @@ public class ZookeeperExample {
 
 			System.out.println("Waiting for peers to elect a leader");
 			assertTrue("Zookeeper 1 did not find its peer",
-					Utils.waitForCondition(60 * 1000, new Condition() {
+					Utils.waitForCondition(120 * 1000, new Condition() {
 						@Override
 						public boolean isTrue() {
 							return launcher1.getQuorumPeer().getPeerState() != ServerState.LOOKING;
@@ -109,7 +109,7 @@ public class ZookeeperExample {
 
 			Thread.sleep(2000); // Just because
 			assertTrue("Zookeeper 2 did not find its peer",
-					Utils.waitForCondition(60 * 1000, new Condition() {
+					Utils.waitForCondition(120 * 1000, new Condition() {
 						@Override
 						public boolean isTrue() {
 							return launcher2.getQuorumPeer().getPeerState() != ServerState.LOOKING;
@@ -120,7 +120,7 @@ public class ZookeeperExample {
 			Thread.sleep(2000); // Just because
 
 			assertTrue("Zookeeper 1 does not have the correct view size",
-					Utils.waitForCondition(60 * 1000, new Condition() {
+					Utils.waitForCondition(120 * 1000, new Condition() {
 						@Override
 						public boolean isTrue() {
 							return launcher1.getQuorumPeer().getView().size() == 2;
@@ -129,7 +129,7 @@ public class ZookeeperExample {
 
 			Thread.sleep(2000); // Just because
 			assertTrue("Zookeeper 2 does not have the correct view size",
-					Utils.waitForCondition(60 * 1000, new Condition() {
+					Utils.waitForCondition(120 * 1000, new Condition() {
 						@Override
 						public boolean isTrue() {
 							return launcher1.getQuorumPeer().getView().size() == 2;

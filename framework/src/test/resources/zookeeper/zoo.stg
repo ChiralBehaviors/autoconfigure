@@ -5,5 +5,5 @@ clientPort=<configuredService.port>
 initLimit=5
 syncLimit=2
 myid=<myid>
-<cluster:{ member |server.<member.id>=<member.host>:<member.port>:<member.electionPort><\n>}>
+<cluster.members:{ member |server.<member.id>=<member.host>:<member.port>:<member.electionPort><\n>}>
 >>

@@ -29,9 +29,6 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.hellblazer.autoconfigure.Service;
-import com.hellblazer.autoconfigure.ServiceModelAdaptor;
-import com.hellblazer.autoconfigure.configuration.Template;
 
 /**
  * A simple driver you can use to debug your templates without requiring the
@@ -72,7 +69,7 @@ public class TemplateDebugger {
 	@JsonProperty
 	private String templateGroupFile;
 	@JsonProperty
-	private String templateName = Template.CONFIGURATION;
+	private String templateName = "configuration";
 	@JsonProperty
 	private Map<String, String> variables = new HashMap<>();
 
@@ -82,8 +79,6 @@ public class TemplateDebugger {
 	 */
 	public String render() {
 		STGroupFile templateGroup = new STGroupFile(templateGroupFile);
-		templateGroup.registerModelAdaptor(Service.class,
-				new ServiceModelAdaptor());
 		ST template = templateGroup.getInstanceOf(templateName);
 		if (template == null) {
 			throw new IllegalStateException(
@@ -108,7 +103,7 @@ public class TemplateDebugger {
 		for (Entry<String, List<Map<String, String>>> entry : serviceCollections
 				.entrySet()) {
 			try {
-				template.add(entry.getKey(), entry.getValue());
+				template.add(entry.getKey(), new MockCluster(entry.getValue()));
 			} catch (IllegalArgumentException e) {
 				// no parameter to this template
 			}
