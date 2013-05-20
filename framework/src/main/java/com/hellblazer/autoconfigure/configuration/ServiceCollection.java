@@ -23,7 +23,6 @@ import java.util.UUID;
 
 import com.hellblazer.autoconfigure.AutoConfigure;
 import com.hellblazer.autoconfigure.Cluster;
-import com.hellblazer.autoconfigure.ClusterImpl;
 import com.hellblazer.autoconfigure.Service;
 import com.hellblazer.slp.ServiceReference;
 import com.hellblazer.slp.ServiceScope;
@@ -53,7 +52,7 @@ public class ServiceCollection {
 	 * @return the Cluster of service models discovered for this collection
 	 */
 	public Cluster getCluster() {
-		return new ClusterImpl(discovered);
+		return new Cluster(discovered);
 	}
 
 	public void discover(ServiceReference reference) {
