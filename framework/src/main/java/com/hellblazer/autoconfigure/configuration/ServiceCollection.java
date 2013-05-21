@@ -55,7 +55,7 @@ public class ServiceCollection {
 		return new Cluster(discovered);
 	}
 
-	public void discover(ServiceReference reference) {
+	public synchronized void discover(ServiceReference reference) {
 		discovered.add(new Service(reference.getUrl(), reference
 				.getProperties()));
 		canonicalizeServices();
