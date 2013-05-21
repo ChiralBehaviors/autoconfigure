@@ -132,7 +132,7 @@ public class ZookeeperExample {
 					Utils.waitForCondition(120 * 1000, new Condition() {
 						@Override
 						public boolean isTrue() {
-							return launcher1.getQuorumPeer().getView().size() == 2;
+							return launcher2.getQuorumPeer().getView().size() == 2;
 						}
 					}));
 			System.out.println("Everything is hunky dory");

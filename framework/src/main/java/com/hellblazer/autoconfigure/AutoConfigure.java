@@ -713,8 +713,7 @@ public class AutoConfigure {
 
 		// Register the service collection variables
 		for (ServiceCollection definition : serviceCollections.values()) {
-			resolvedVariables.put(definition.variable,
-					definition.getCluster());
+			resolvedVariables.put(definition.variable, definition.getCluster());
 		}
 
 		// Register the id variable, if a service collection is indicated
