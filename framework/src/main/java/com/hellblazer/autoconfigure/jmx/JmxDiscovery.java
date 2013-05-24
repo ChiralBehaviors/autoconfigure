@@ -15,6 +15,8 @@
 package com.hellblazer.autoconfigure.jmx;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.rmi.NoSuchObjectException;
@@ -43,6 +45,7 @@ import com.hellblazer.autoconfigure.configuration.JmxConfiguration;
 import com.hellblazer.slp.ServiceScope;
 import com.hellblazer.slp.ServiceType;
 import com.hellblazer.slp.ServiceURL;
+import com.hellblazer.utils.Utils;
 import com.sun.jmx.remote.internal.RMIExporter;
 
 @SuppressWarnings("restriction")
@@ -114,13 +117,13 @@ public class JmxDiscovery {
 
     private UUID registration;
     private final AtomicBoolean running = new AtomicBoolean();
-    private ServiceScope scope;
+    private final ServiceScope scope;
     private JMXConnectorServer server;
-
-    private String serviceType;
+    private final String serviceType;
 
     public JmxDiscovery(JmxConfiguration configuration, ServiceScope scope) {
-
+	this.scope = scope;
+	serviceType = configuration.serviceType;
     }
 
     public void shutdown() throws IOException {
@@ -130,7 +133,7 @@ public class JmxDiscovery {
 	}
     }
 
-    public void start() throws IOException {
+    public void start(InetAddress defaultHost) throws IOException {
 	if (running.compareAndSet(false, true)) {
 	    Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 		@Override
@@ -142,6 +145,11 @@ public class JmxDiscovery {
 		    }
 		}
 	    }, "Jmx Discovery Shutdown Hook"));
+	    InetSocketAddress jmxEndpoint = new InetSocketAddress(defaultHost,
+		    Utils.allocatePort(defaultHost));
+	    log.info(String.format("JMX Endpoint on %s", jmxEndpoint));
+	    server = contruct(jmxEndpoint,
+		    ManagementFactory.getPlatformMBeanServer());
 	    server.start();
 	    ServiceURL serviceUrl = constructServiceURL(server.getAddress());
 	    log.info(String.format("Registering as %s", serviceUrl));

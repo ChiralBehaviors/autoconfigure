@@ -873,8 +873,8 @@ public class AutoConfigure {
 		}
 		logger.info("Auto configuration successfully completed, running success action");
 		try {
+		    jmxDiscovery.start(bound.get().getAddress());
 		    configuredService.succeed(generatedConfigurations);
-		    jmxDiscovery.start();
 		    logger.info("Success action completed");
 		} catch (Throwable e) {
 		    logger.error(
