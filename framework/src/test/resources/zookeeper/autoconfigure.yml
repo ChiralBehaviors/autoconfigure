@@ -3,6 +3,7 @@ networkInterface: ${network.interface}
 addressIndex: 0
 additionalPorts:
   - electionPort
+  - quorumPort
 totalOrderingFrom: cluster
 totalOrderingVariable: myid
 
