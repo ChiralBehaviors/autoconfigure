@@ -45,16 +45,16 @@ public class ZookeeperExample {
 	@Test
 	public void example() throws Exception {
 		BasicConfigurator.configure();
-		Logger.getRootLogger().setLevel(Level.FATAL);
+		Logger.getRootLogger().setLevel(Level.INFO);
 		Gossip gossipSeed = new GossipConfiguration().construct();
 		InetSocketAddress gossipSeedAddress = gossipSeed.getLocalAddress();
 		gossipSeed.start();
 
 		try (TemporaryDirectory dir1 = new TemporaryDirectory(
-				"functional-test-1-", ".dir", new File("").getAbsoluteFile());
+				"functional-test-1-", ".dir", new File("target").getAbsoluteFile());
 				TemporaryDirectory dir2 = new TemporaryDirectory(
 						"functional-test-2-", ".dir",
-						new File("").getAbsoluteFile());) {
+						new File("target").getAbsoluteFile());) {
 			final File autoconfig1 = new File(dir1.directory,
 					"autoconfigure.yml").getAbsoluteFile();
 			final File autoconfig2 = new File(dir2.directory,
