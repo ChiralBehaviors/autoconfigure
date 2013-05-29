@@ -25,21 +25,24 @@ import com.hellblazer.utils.Utils;
  * 
  */
 public class UniqueDirectory {
-	private static final Logger log = Logger.getLogger(UniqueDirectory.class
-			.getCanonicalName());
+    private static final Logger log = Logger.getLogger(UniqueDirectory.class
+	    .getCanonicalName());
 
-	public File base;
-	public String prefix;
-	public String suffix;
-	public String variable;
+    public File base;
+    public String prefix;
+    public String suffix;
+    public String variable;
 
-	public File resolve() throws IOException {
-		File directory = File.createTempFile(prefix, suffix, base)
-				.getAbsoluteFile();
-		Utils.initializeDirectory(directory);
-		log.info(String.format(
-				"Created unique directory, label [%s], path [%s]", variable,
-				directory.getAbsolutePath()));
-		return directory;
+    public File resolve() throws IOException {
+	if (base == null) {
+	    base = new File(System.getProperty("user.dir"));
 	}
+	File directory = File.createTempFile(prefix, suffix, base)
+		.getAbsoluteFile();
+	Utils.initializeDirectory(directory);
+	log.info(String.format(
+		"Created unique directory, label [%s], path [%s]", variable,
+		directory.getAbsolutePath()));
+	return directory;
+    }
 }
