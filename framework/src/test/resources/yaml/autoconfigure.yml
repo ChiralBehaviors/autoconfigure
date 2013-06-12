@@ -1,6 +1,5 @@
 serviceUrl: "service:zookeeper:%s:%s"
 networkInterface: en0
-addressIndex: 0
 
 uniqueDirectories:
   - base: /tmp

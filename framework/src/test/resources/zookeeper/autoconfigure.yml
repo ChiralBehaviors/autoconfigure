@@ -1,6 +1,5 @@
 serviceUrl: "service:zookeeper:tcp://%s:%s"
 networkInterface: ${network.interface}
-addressIndex: 0
 additionalPorts:
   - electionPort
   - quorumPort

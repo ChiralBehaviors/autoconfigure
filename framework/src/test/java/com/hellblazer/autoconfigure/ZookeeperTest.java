@@ -37,7 +37,7 @@ import com.hellblazer.utils.Utils;
  * @author hhildebrand
  * 
  */
-public class ZookeeperExample {
+public class ZookeeperTest {
 
 	@Test
 	public void example() throws Exception {

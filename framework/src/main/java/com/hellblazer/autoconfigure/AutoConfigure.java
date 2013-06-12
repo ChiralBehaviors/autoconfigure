@@ -209,9 +209,9 @@ public class AutoConfigure {
 	    List<String> additionalPorts, String totalOrderingFrom,
 	    String totalOrderingVariable, boolean verboseTemplating,
 	    JmxConfiguration jmxConfiguration) {
-	this(new Configuration(serviceFormat, networkInterface, addressIndex,
-		ipV6, serviceProperties, services, serviceCollections,
-		templates, variables, uniqueDirectories, additionalPorts,
+	this(new Configuration(serviceFormat, networkInterface, ipV6,
+		serviceProperties, services, serviceCollections, templates,
+		variables, uniqueDirectories, additionalPorts,
 		totalOrderingFrom, totalOrderingVariable, verboseTemplating,
 		jmxConfiguration), discovery);
     }
@@ -340,9 +340,9 @@ public class AutoConfigure {
      */
     protected InetAddress determineHostAddress() {
 	NetworkInterface iface = determineNetworkInterface();
-	Enumeration<InetAddress> interfaceAddresses = iface.getInetAddresses();
 	InetAddress raw = null;
-	for (int i = 0; i <= config.addressIndex; i++) {
+	for (Enumeration<InetAddress> interfaceAddresses = iface
+		.getInetAddresses(); interfaceAddresses.hasMoreElements();) {
 	    if (!interfaceAddresses.hasMoreElements()) {
 		String msg = String
 			.format("Unable to find any network address for interface[%s] {%s}",
@@ -351,6 +351,13 @@ public class AutoConfigure {
 		throw new IllegalStateException(msg);
 	    }
 	    raw = interfaceAddresses.nextElement();
+	    if (config.ipV6) {
+		if (raw.getAddress().length == 6) {
+		    break;
+		}
+	    } else if (raw.getAddress().length == 4) {
+		break;
+	    }
 	}
 	if (raw == null) {
 	    String msg = String
