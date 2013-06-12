@@ -157,7 +157,7 @@ public class TestAutoConfigure {
 		    serviceProps2);
 
 	    AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
-		    interfaceName, 0, serviceProperties, discovery,
+		    interfaceName, 0, false, serviceProperties, discovery,
 		    serviceDefinitions, serviceCollectionDefinitions,
 		    templates, substitutions, uniqueDirectories,
 		    additionalPorts, null, null, true, jmxConfig);
@@ -321,7 +321,7 @@ public class TestAutoConfigure {
 		    serviceProps2);
 
 	    AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
-		    interfaceName, 0, serviceProperties, discovery,
+		    interfaceName, 0, false, serviceProperties, discovery,
 		    serviceDefinitions, serviceCollectionDefinitions,
 		    templates, substitutions, uniqueDirectories,
 		    additionalPorts, null, null, true, jmxConfig);
@@ -402,7 +402,7 @@ public class TestAutoConfigure {
 	Map<String, String> substitutions = new HashMap<>();
 	List<String> additionalPorts = new ArrayList<>();
 	AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
-		interfaceName, 0, serviceProperties, discovery,
+		interfaceName, 0, false, serviceProperties, discovery,
 		serviceDefinitions, serviceCollectionDefinitions, templates,
 		substitutions, uniqueDirectories, additionalPorts, null, null,
 		true, jmxConfig);
@@ -469,7 +469,7 @@ public class TestAutoConfigure {
 	when(serviceCollectionRef.getUrl()).thenReturn(serviceCollectionUrl);
 
 	AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
-		interfaceName, 0, serviceProperties, discovery,
+		interfaceName, 0, false, serviceProperties, discovery,
 		serviceDefinitions, serviceCollectionDefinitions, templates,
 		substitutions, uniqueDirectories, additionalPorts, null, null,
 		true, jmxConfig);

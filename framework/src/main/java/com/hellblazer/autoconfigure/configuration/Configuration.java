@@ -28,10 +28,11 @@ import com.hellblazer.gossip.configuration.GossipConfiguration;
  * 
  */
 public class Configuration {
-    public JmxConfiguration jmx = new JmxConfiguration();
     public List<String> additionalPorts = new ArrayList<>();
     public int addressIndex = 0;
     public GossipConfiguration gossip = new GossipConfiguration();
+    public boolean ipV6 = false;
+    public JmxConfiguration jmx = new JmxConfiguration();
     public String networkInterface;
     public List<ServiceCollection> serviceCollections = new ArrayList<>();
     public Map<String, String> serviceProperties = new HashMap<>();
@@ -43,6 +44,37 @@ public class Configuration {
     public List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
     public Map<String, String> variables = new HashMap<>();
     public boolean verboseTemplating = false;
+
+    public Configuration() {
+
+    }
+
+    public Configuration(String serviceUrl, String networkInterface,
+	    int addressIndex, boolean ipV6,
+	    Map<String, String> serviceProperties,
+	    List<SingletonService> services,
+	    List<ServiceCollection> serviceCollections,
+	    List<Template> templates, Map<String, String> variables,
+	    List<UniqueDirectory> uniqueDirectories,
+	    List<String> additionalPorts, String totalOrderingFrom,
+	    String totalOrderingVariable, boolean verboseTemplating,
+	    JmxConfiguration jmx) {
+	this.serviceUrl = serviceUrl;
+	this.networkInterface = networkInterface;
+	this.addressIndex = addressIndex;
+	this.ipV6 = ipV6;
+	this.serviceProperties = serviceProperties;
+	this.services = services;
+	this.serviceCollections = serviceCollections;
+	this.templates = templates;
+	this.variables = variables;
+	this.uniqueDirectories = uniqueDirectories;
+	this.additionalPorts = additionalPorts;
+	this.totalOrderingFrom = totalOrderingFrom;
+	this.totalOrderingVariable = totalOrderingVariable;
+	this.verboseTemplating = verboseTemplating;
+	this.jmx = jmx;
+    }
 
     /**
      * Convienence method to construct an autoconfiguration instance.

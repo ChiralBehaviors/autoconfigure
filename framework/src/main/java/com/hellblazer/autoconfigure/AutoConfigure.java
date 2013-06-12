@@ -92,28 +92,21 @@ public class AutoConfigure {
     }
 
     private final Map<String, String> additionalPorts = new HashMap<>();
-    private final int addressIndex;
+
     private final AtomicReference<InetSocketAddress> bound = new AtomicReference<>();
+    private final Configuration config;
     private final ServiceScope discovery;
     private final Map<String, String> environment = new HashMap<>();
-    private final AtomicBoolean failed = new AtomicBoolean();
+    private final AtomicBoolean failed = new AtomicBoolean();;
     private final Map<String, File> generatedConfigurations = new HashMap<>();
-    private final String networkInterface;
+    private final JmxDiscovery jmxDiscovery;
     private final Map<String, String> registeredServiceProperties = new HashMap<>();
     private final AtomicReference<Rendezvous> rendezvous = new AtomicReference<>();
     private final Map<ServiceListener, ServiceCollection> serviceCollections = new HashMap<>();
-    private final String serviceFormat;
-    private final Map<String, String> serviceProperties;
     private final AtomicReference<UUID> serviceRegistration = new AtomicReference<>();
     private final Map<ServiceListener, SingletonService> singletonServices = new HashMap<>();
-    private final List<Template> templates;
+
     private final AtomicReference<ServiceURL> thisService = new AtomicReference<>();
-    private final String totalOrderingFrom;
-    private final String totalOrderingVariable;
-    private final List<UniqueDirectory> uniqueDirectories;
-    private final Map<String, String> variables;
-    private final boolean verboseTemplating;
-    private final JmxDiscovery jmxDiscovery;
 
     /**
      * Construct an instance from the configuration POJO
@@ -124,13 +117,38 @@ public class AutoConfigure {
      *             - if the discovery service cannot be constructed
      */
     public AutoConfigure(Configuration config) throws SocketException {
-	this(config.serviceUrl, config.networkInterface, config.addressIndex,
-		config.serviceProperties, new GossipScope(
-			config.gossip.construct()).start(), config.services,
-		config.serviceCollections, config.templates, config.variables,
-		config.uniqueDirectories, config.additionalPorts,
-		config.totalOrderingFrom, config.totalOrderingVariable,
-		config.verboseTemplating, config.jmx);
+	this(config, new GossipScope(config.gossip.construct()));
+    }
+
+    /**
+     * Construct an instance from the configuration POJO
+     * 
+     * @param config
+     *            - the configuration to use
+     * @param discovery
+     *            - the service discovery scope to use
+     * @throws SocketException
+     *             - if the discovery service cannot be constructed
+     */
+    public AutoConfigure(Configuration config, ServiceScope discovery) {
+	this.config = config;
+	this.discovery = discovery;
+
+	for (SingletonService service : config.services) {
+	    singletonServices.put(serviceListener(), service);
+	}
+	for (ServiceCollection collection : config.serviceCollections) {
+	    this.serviceCollections
+		    .put(serviceCollectionListener(), collection);
+	}
+	for (String p : config.additionalPorts) {
+	    this.additionalPorts.put(p, p);
+	}
+	for (Template template : config.templates) {
+	    generatedConfigurations.put(template.name, template.generated);
+	}
+	jmxDiscovery = new JmxDiscovery(config.jmx, discovery);
+	this.discovery.start();
     }
 
     /**
@@ -144,6 +162,8 @@ public class AutoConfigure {
      * @param addressIndex
      *            - the index of the address to use that are bound to the
      *            network interface
+     * @param ipV6
+     *            - if true, allocate address as ipV6
      * @param serviceProperties
      *            - the properties used to register this service in the
      *            discovery scope
@@ -180,40 +200,49 @@ public class AutoConfigure {
      *            templates
      */
     public AutoConfigure(String serviceFormat, String networkInterface,
-	    int addressIndex, Map<String, String> serviceProperties,
-	    ServiceScope discovery, List<SingletonService> services,
+	    int addressIndex, boolean ipV6,
+	    Map<String, String> serviceProperties, ServiceScope discovery,
+	    List<SingletonService> services,
 	    List<ServiceCollection> serviceCollections,
 	    List<Template> templates, Map<String, String> variables,
 	    List<UniqueDirectory> uniqueDirectories,
 	    List<String> additionalPorts, String totalOrderingFrom,
 	    String totalOrderingVariable, boolean verboseTemplating,
 	    JmxConfiguration jmxConfiguration) {
-	this.serviceFormat = serviceFormat;
-	this.networkInterface = networkInterface;
-	this.addressIndex = addressIndex;
-	this.serviceProperties = serviceProperties;
-	this.discovery = discovery;
-	this.templates = templates;
-	this.variables = variables;
-	this.uniqueDirectories = uniqueDirectories;
-	this.totalOrderingFrom = totalOrderingFrom;
-	this.totalOrderingVariable = totalOrderingVariable;
-	this.verboseTemplating = verboseTemplating;
+	this(new Configuration(serviceFormat, networkInterface, addressIndex,
+		ipV6, serviceProperties, services, serviceCollections,
+		templates, variables, uniqueDirectories, additionalPorts,
+		totalOrderingFrom, totalOrderingVariable, verboseTemplating,
+		jmxConfiguration), discovery);
+    }
 
-	for (SingletonService service : services) {
-	    singletonServices.put(serviceListener(), service);
+    /**
+     * Allocate any additional ports required by the configured service
+     * instance.
+     */
+    protected void allocateAdditionalPorts() {
+	for (Map.Entry<String, String> entry : additionalPorts.entrySet()) {
+	    entry.setValue(String.valueOf(Utils.allocatePort(bound.get()
+		    .getAddress())));
 	}
-	for (ServiceCollection collection : serviceCollections) {
-	    this.serviceCollections
-		    .put(serviceCollectionListener(), collection);
+    }
+
+    /**
+     * Allocate the main service port, used when registering the instance of the
+     * service being configured.
+     */
+    protected void allocatePort() {
+	InetAddress address = determineHostAddress();
+	int port = Utils.allocatePort(address);
+	if (port <= 0) {
+	    String msg = String.format(
+		    "Unable to allocate port on address [%s]", address);
+	    logger.error(msg);
+	    throw new IllegalStateException(msg);
 	}
-	for (String p : additionalPorts) {
-	    this.additionalPorts.put(p, p);
-	}
-	for (Template template : templates) {
-	    generatedConfigurations.put(template.name, template.generated);
-	}
-	jmxDiscovery = new JmxDiscovery(jmxConfiguration, discovery);
+	InetSocketAddress boundAddress = new InetSocketAddress(address, port);
+	logger.info(String.format("Binding this service to [%s]", boundAddress));
+	bound.set(boundAddress);
     }
 
     /**
@@ -306,39 +335,6 @@ public class AutoConfigure {
 	}
     }
 
-    public ServiceScope getDiscoveryScope() {
-	return discovery;
-    }
-
-    /**
-     * Allocate any additional ports required by the configured service
-     * instance.
-     */
-    protected void allocateAdditionalPorts() {
-	for (Map.Entry<String, String> entry : additionalPorts.entrySet()) {
-	    entry.setValue(String.valueOf(Utils.allocatePort(bound.get()
-		    .getAddress())));
-	}
-    }
-
-    /**
-     * Allocate the main service port, used when registering the instance of the
-     * service being configured.
-     */
-    protected void allocatePort() {
-	InetAddress address = determineHostAddress();
-	int port = Utils.allocatePort(address);
-	if (port <= 0) {
-	    String msg = String.format(
-		    "Unable to allocate port on address [%s]", address);
-	    logger.error(msg);
-	    throw new IllegalStateException(msg);
-	}
-	InetSocketAddress boundAddress = new InetSocketAddress(address, port);
-	logger.info(String.format("Binding this service to [%s]", boundAddress));
-	bound.set(boundAddress);
-    }
-
     /**
      * @return the host address to bind this service to
      */
@@ -346,7 +342,7 @@ public class AutoConfigure {
 	NetworkInterface iface = determineNetworkInterface();
 	Enumeration<InetAddress> interfaceAddresses = iface.getInetAddresses();
 	InetAddress raw = null;
-	for (int i = 0; i <= addressIndex; i++) {
+	for (int i = 0; i <= config.addressIndex; i++) {
 	    if (!interfaceAddresses.hasMoreElements()) {
 		String msg = String
 			.format("Unable to find any network address for interface[%s] {%s}",
@@ -381,7 +377,7 @@ public class AutoConfigure {
      */
     protected NetworkInterface determineNetworkInterface() {
 	NetworkInterface iface;
-	if (networkInterface == null) {
+	if (config.networkInterface == null) {
 	    try {
 		iface = NetworkInterface.getByIndex(1);
 	    } catch (SocketException e) {
@@ -392,18 +388,18 @@ public class AutoConfigure {
 	    }
 	} else {
 	    try {
-		iface = NetworkInterface.getByName(networkInterface);
+		iface = NetworkInterface.getByName(config.networkInterface);
 	    } catch (SocketException e) {
 		String msg = String.format(
 			"Unable to obtain network interface[%s]",
-			networkInterface);
+			config.networkInterface);
 		logger.error(msg, e);
 		throw new IllegalStateException(msg, e);
 	    }
 	    if (iface == null) {
 		String msg = String.format(
 			"Unable to find network interface [%s]",
-			networkInterface);
+			config.networkInterface);
 		logger.error(msg);
 		throw new IllegalStateException(msg);
 	    }
@@ -531,8 +527,8 @@ public class AutoConfigure {
     protected void generate(Template template, Service thisService,
 	    Map<String, Object> variables) {
 	STGroupFile group = new STGroupFile(template.templateGroup);
-	STGroup.verbose = verboseTemplating;
-	STGroup.trackCreationEvents = verboseTemplating;
+	STGroup.verbose = config.verboseTemplating;
+	STGroup.trackCreationEvents = config.verboseTemplating;
 	group.registerModelAdaptor(Service.class, new ServiceModelAdaptor());
 	ST st = group.getInstanceOf(template.template);
 	if (st == null) {
@@ -582,7 +578,7 @@ public class AutoConfigure {
 	Service model = new Service(thisService.get(),
 		registeredServiceProperties);
 	Map<String, Object> variables = resolveVariables();
-	for (Template template : templates) {
+	for (Template template : config.templates) {
 	    generate(template, model, variables);
 	}
     }
@@ -612,6 +608,10 @@ public class AutoConfigure {
 	return cardinality;
     }
 
+    public ServiceScope getDiscoveryScope() {
+	return discovery;
+    }
+
     /**
      * Register the listeners for the required services on the discovery scope
      */
@@ -626,9 +626,9 @@ public class AutoConfigure {
     protected void registerService() {
 	allocatePort();
 	allocateAdditionalPorts();
-	String service = String.format(serviceFormat,
-		bound.get().getHostName(), bound.get().getPort());
-	registeredServiceProperties.putAll(serviceProperties);
+	String service = String.format(config.serviceUrl, bound.get()
+		.getHostName(), bound.get().getPort());
+	registeredServiceProperties.putAll(config.serviceProperties);
 	registeredServiceProperties.putAll(additionalPorts);
 	try {
 	    thisService.set(new ServiceURL(service));
@@ -698,10 +698,10 @@ public class AutoConfigure {
 	Map<String, Object> resolvedVariables = new HashMap<>();
 
 	// Add any configured variables
-	resolvedVariables.putAll(variables);
+	resolvedVariables.putAll(config.variables);
 
 	// Add the generated directories
-	for (UniqueDirectory uDir : uniqueDirectories) {
+	for (UniqueDirectory uDir : config.uniqueDirectories) {
 	    try {
 		resolvedVariables.put(uDir.variable, uDir.resolve());
 	    } catch (IOException e) {
@@ -726,16 +726,17 @@ public class AutoConfigure {
 	// Register the id variable, if a service collection is indicated
 	// as the collection providing the total ordering for this service's
 	// cluster
-	if (totalOrderingFrom != null) {
-	    if (totalOrderingVariable == null) {
+	if (config.totalOrderingFrom != null) {
+	    if (config.totalOrderingVariable == null) {
 		logger.info(String
 			.format("Configuration indicated total ordering of this service's cluster, but no totalOrderingVariable is configured to receive this index",
-				totalOrderingFrom));
+				config.totalOrderingFrom));
 	    } else {
 		String index = null;
 		for (ServiceCollection serviceCollection : serviceCollections
 			.values()) {
-		    if (serviceCollection.variable.equals(totalOrderingFrom)) {
+		    if (serviceCollection.variable
+			    .equals(config.totalOrderingFrom)) {
 			index = serviceCollection
 				.totalOrderingIndexOf(serviceRegistration.get());
 			break;
@@ -744,14 +745,14 @@ public class AutoConfigure {
 		if (index == null) {
 		    String msg = String
 			    .format("Configuration indicated total ordering of this service's cluster from service collection [%s], but this service could not be found in that collection",
-				    totalOrderingFrom);
+				    config.totalOrderingFrom);
 		    logger.error(msg);
 		    throw new IllegalStateException(msg);
 		}
 		logger.info(String
 			.format("Using a total ordering index of %s for the configured service from service collection %s",
-				index, totalOrderingFrom));
-		resolvedVariables.put(totalOrderingVariable, index);
+				index, config.totalOrderingFrom));
+		resolvedVariables.put(config.totalOrderingVariable, index);
 	    }
 	}
 
@@ -842,6 +843,15 @@ public class AutoConfigure {
 	};
     }
 
+    public void shutdown() {
+	try {
+	    jmxDiscovery.shutdown();
+	} catch (IOException e) {
+	    logger.trace("");
+	}
+	discovery.stop();
+    };
+
     /**
      * @param success
      * @param failure
@@ -893,14 +903,5 @@ public class AutoConfigure {
 		}
 	    }
 	};
-    };
-
-    public void shutdown() {
-	try {
-	    jmxDiscovery.shutdown();
-	} catch (IOException e) {
-	    logger.trace("");
-	}
-	discovery.stop();
     }
 }
