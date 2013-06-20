@@ -1,5 +1,6 @@
-configuration(configuredService, b) ::= <<
+configuration(configuredService, b, gossipSeeds) ::= <<
 host=<configuredService.host>
 port=<configuredService.port>
 property.b=<b>
+wka=<gossipSeeds.first.host>:<gossipSeeds.first.port>
 >>

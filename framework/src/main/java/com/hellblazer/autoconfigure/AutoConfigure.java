@@ -49,6 +49,7 @@ import com.hellblazer.autoconfigure.configuration.SingletonService;
 import com.hellblazer.autoconfigure.configuration.Template;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
 import com.hellblazer.autoconfigure.jmx.JmxDiscovery;
+import com.hellblazer.gossip.configuration.GossipConfiguration;
 import com.hellblazer.nexus.GossipScope;
 import com.hellblazer.slp.InvalidSyntaxException;
 import com.hellblazer.slp.ServiceEvent;
@@ -198,6 +199,8 @@ public class AutoConfigure {
      * @param verboseTemplating
      *            - if true, turn on verbose processing when processing
      *            templates
+     * @param gossipConfig
+     *            - the configuration for the Gossip instance
      */
     public AutoConfigure(String serviceFormat, String networkInterface,
 	    int addressIndex, boolean ipV6,
@@ -208,12 +211,12 @@ public class AutoConfigure {
 	    List<UniqueDirectory> uniqueDirectories,
 	    List<String> additionalPorts, String totalOrderingFrom,
 	    String totalOrderingVariable, boolean verboseTemplating,
-	    JmxConfiguration jmxConfiguration) {
+	    JmxConfiguration jmxConfiguration, GossipConfiguration gossipConfig) {
 	this(new Configuration(serviceFormat, networkInterface, ipV6,
 		serviceProperties, services, serviceCollections, templates,
 		variables, uniqueDirectories, additionalPorts,
 		totalOrderingFrom, totalOrderingVariable, verboseTemplating,
-		jmxConfiguration), discovery);
+		jmxConfiguration, gossipConfig), discovery);
     }
 
     /**
@@ -537,6 +540,7 @@ public class AutoConfigure {
 	STGroup.verbose = config.verboseTemplating;
 	STGroup.trackCreationEvents = config.verboseTemplating;
 	group.registerModelAdaptor(Service.class, new ServiceModelAdaptor());
+	group.registerModelAdaptor(InetSocketAddress.class, new InetSocketAddressAdaptor());
 	ST st = group.getInstanceOf(template.template);
 	if (st == null) {
 	    String msg = String
@@ -555,7 +559,16 @@ public class AutoConfigure {
 	    }
 	}
 
-	// Finally, register the service being configured
+	// Register the Gossip seeds
+	try {
+        // create a Cluster to make interaction with Gossip seeds equal to service collections
+	    st.add("gossipSeeds", new Cluster<>(config.gossip.seeds));
+	} catch (IllegalArgumentException e) {
+	    // Really? This is how I have to detect that there isn't a formal
+	    // parameter? #fail
+	}
+
+    // Finally, register the service being configured
 	try {
 	    st.add(template.thisServiceName, thisService);
 	} catch (IllegalArgumentException e) {
