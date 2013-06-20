@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,7 @@ import com.hellblazer.autoconfigure.configuration.ServiceCollection;
 import com.hellblazer.autoconfigure.configuration.SingletonService;
 import com.hellblazer.autoconfigure.configuration.Template;
 import com.hellblazer.autoconfigure.configuration.UniqueDirectory;
+import com.hellblazer.gossip.configuration.GossipConfiguration;
 import com.hellblazer.slp.ServiceListener;
 import com.hellblazer.slp.ServiceReference;
 import com.hellblazer.slp.ServiceScope;
@@ -160,7 +162,7 @@ public class TestAutoConfigure {
 		    interfaceName, 0, false, serviceProperties, discovery,
 		    serviceDefinitions, serviceCollectionDefinitions,
 		    templates, substitutions, uniqueDirectories,
-		    additionalPorts, null, null, true, jmxConfig);
+		    additionalPorts, null, null, true, jmxConfig, null);
 	    AutoConfigureService configuredService = new AutoConfigureService(
 		    autoConfigure) {
 
@@ -320,11 +322,14 @@ public class TestAutoConfigure {
 	    when(serviceCollection2Ref.getProperties()).thenReturn(
 		    serviceProps2);
 
+        GossipConfiguration gossipConfig = new GossipConfiguration();
+        gossipConfig.seeds = Collections.singletonList(new InetSocketAddress("localhost", 54321));
+
 	    AutoConfigure autoConfigure = new AutoConfigure(serviceFormat,
 		    interfaceName, 0, false, serviceProperties, discovery,
 		    serviceDefinitions, serviceCollectionDefinitions,
 		    templates, substitutions, uniqueDirectories,
-		    additionalPorts, null, null, true, jmxConfig);
+		    additionalPorts, null, null, true, jmxConfig, gossipConfig);
 	    AutoConfigureService configuredService = new AutoConfigureService(
 		    autoConfigure) {
 
@@ -384,6 +389,7 @@ public class TestAutoConfigure {
 	    assertEquals(String.valueOf(bound.getPort()),
 		    properties1.get(portVariable));
 	    assertEquals("B", properties1.get("property.b"));
+        assertEquals("localhost:54321", properties1.get("wka"));
 	    assertEquals(serviceCollectionConfig,
 		    properties2.get(serviceCollectionVariable));
 	    assertEquals(serviceConfig, properties2.get(serviceVariable));
@@ -405,7 +411,7 @@ public class TestAutoConfigure {
 		interfaceName, 0, false, serviceProperties, discovery,
 		serviceDefinitions, serviceCollectionDefinitions, templates,
 		substitutions, uniqueDirectories, additionalPorts, null, null,
-		true, jmxConfig);
+		true, jmxConfig, null);
 	final AtomicBoolean succeeded = new AtomicBoolean();
 	final AtomicBoolean completed = new AtomicBoolean();
 	AutoConfigureService configuredService = new AutoConfigureService(
@@ -472,7 +478,7 @@ public class TestAutoConfigure {
 		interfaceName, 0, false, serviceProperties, discovery,
 		serviceDefinitions, serviceCollectionDefinitions, templates,
 		substitutions, uniqueDirectories, additionalPorts, null, null,
-		true, jmxConfig);
+		true, jmxConfig, null);
 	AutoConfigureService configuredService = new AutoConfigureService(
 		autoConfigure) {
 

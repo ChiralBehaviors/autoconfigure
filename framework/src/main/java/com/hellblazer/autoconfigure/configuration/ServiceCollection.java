@@ -51,8 +51,8 @@ public class ServiceCollection {
 	/**
 	 * @return the Cluster of service models discovered for this collection
 	 */
-	public Cluster getCluster() {
-		return new Cluster(discovered);
+	public Cluster<Service> getCluster() {
+		return new Cluster<>(discovered);
 	}
 
 	public synchronized void discover(ServiceReference reference) {

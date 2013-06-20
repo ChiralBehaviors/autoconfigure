@@ -23,10 +23,10 @@ import org.stringtemplate.v4.misc.STNoSuchPropertyException;
  * @author hal.hildebrand
  * 
  */
-public class Cluster {
-	private final List<Service> cluster;
+public class Cluster<T> {
+	private final List<T> cluster;
 
-	public Cluster(List<Service> cluster) {
+	public Cluster(List<T> cluster) {
 		this.cluster = cluster;
 	}
 
@@ -34,14 +34,14 @@ public class Cluster {
 		return cluster.size();
 	}
 
-	public Service getFirst() {
+	public T getFirst() {
 		if (cluster.isEmpty()) {
 			throw new STNoSuchPropertyException(null, this, "first");
 		}
 		return cluster.get(0);
 	}
 
-	public List<Service> getMembers() {
+	public List<T> getMembers() {
 		return cluster;
 	}
 	
