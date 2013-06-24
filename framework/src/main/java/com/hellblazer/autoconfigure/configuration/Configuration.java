@@ -56,7 +56,8 @@ public class Configuration {
 	    Map<String, String> variables, List<UniqueDirectory> uniqueDirectories,
 	    List<String> additionalPorts,
 	    String totalOrderingFrom, String totalOrderingVariable,
-	    boolean verboseTemplating, JmxConfiguration jmx) {
+	    boolean verboseTemplating, JmxConfiguration jmx,
+        GossipConfiguration gossip) {
 	this.serviceUrl = serviceUrl;
 	this.networkInterface = networkInterface;
 	this.ipV6 = ipV6;
@@ -71,6 +72,9 @@ public class Configuration {
 	this.totalOrderingVariable = totalOrderingVariable;
 	this.verboseTemplating = verboseTemplating;
 	this.jmx = jmx;
+    if(gossip != null) {
+        this.gossip = gossip;
+    }
     }
 
     /**
