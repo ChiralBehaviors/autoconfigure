@@ -1,3 +1,4 @@
+restartStateFile: ${test.dir}.autoconfigure.restart.file
 serviceUrl: "service:zookeeper:tcp://%s:%s"
 networkInterface: ${network.interface}
 additionalPorts:

@@ -28,53 +28,61 @@ import com.hellblazer.gossip.configuration.GossipConfiguration;
  * 
  */
 public class Configuration {
-    public List<String> additionalPorts = new ArrayList<>();
-    public GossipConfiguration gossip = new GossipConfiguration();
-    public boolean ipV6 = false;
-    public JmxConfiguration jmx = new JmxConfiguration();
-    public String networkInterface;
+    public static String           RESTART_STATE_FILE = ".autoconfigure.restart.state";
+
+    public List<String>            additionalPorts    = new ArrayList<>();
+    public GossipConfiguration     gossip             = new GossipConfiguration();
+    public boolean                 ipV6               = false;
+    public JmxConfiguration        jmx                = new JmxConfiguration();
+    public String                  networkInterface;
     public List<ServiceCollection> serviceCollections = new ArrayList<>();
-    public Map<String, String> serviceProperties = new HashMap<>();
-    public List<SingletonService> services = new ArrayList<>();
-    public String serviceUrl;
-    public List<Template> templates = new ArrayList<>();
-    public String totalOrderingFrom;
-    public String totalOrderingVariable;
-    public List<UniqueDirectory> uniqueDirectories = new ArrayList<>();
-    public Map<String, String> variables = new HashMap<>();
-    public boolean verboseTemplating = false;
+    public Map<String, String>     serviceProperties  = new HashMap<>();
+    public List<SingletonService>  services           = new ArrayList<>();
+    public String                  serviceUrl;
+    public List<Template>          templates          = new ArrayList<>();
+    public String                  totalOrderingFrom;
+    public String                  totalOrderingVariable;
+    public List<UniqueDirectory>   uniqueDirectories  = new ArrayList<>();
+    public Map<String, String>     variables          = new HashMap<>();
+    public boolean                 verboseTemplating  = false;
+    public String                  restartStateFile   = RESTART_STATE_FILE;
 
     public Configuration() {
 
     }
 
     public Configuration(String serviceUrl, String networkInterface,
-	    boolean ipV6, Map<String, String> serviceProperties,
-	    List<SingletonService> services,
-	    List<ServiceCollection> serviceCollections,
-	    List<Template> templates,
-	    Map<String, String> variables, List<UniqueDirectory> uniqueDirectories,
-	    List<String> additionalPorts,
-	    String totalOrderingFrom, String totalOrderingVariable,
-	    boolean verboseTemplating, JmxConfiguration jmx,
-        GossipConfiguration gossip) {
-	this.serviceUrl = serviceUrl;
-	this.networkInterface = networkInterface;
-	this.ipV6 = ipV6;
-	this.serviceProperties = serviceProperties;
-	this.services = services;
-	this.serviceCollections = serviceCollections;
-	this.templates = templates;
-	this.variables = variables;
-	this.uniqueDirectories = uniqueDirectories;
-	this.additionalPorts = additionalPorts;
-	this.totalOrderingFrom = totalOrderingFrom;
-	this.totalOrderingVariable = totalOrderingVariable;
-	this.verboseTemplating = verboseTemplating;
-	this.jmx = jmx;
-    if(gossip != null) {
-        this.gossip = gossip;
-    }
+                         boolean ipV6, Map<String, String> serviceProperties,
+                         List<SingletonService> services,
+                         List<ServiceCollection> serviceCollections,
+                         List<Template> templates,
+                         Map<String, String> variables,
+                         List<UniqueDirectory> uniqueDirectories,
+                         List<String> additionalPorts,
+                         String totalOrderingFrom,
+                         String totalOrderingVariable,
+                         boolean verboseTemplating, JmxConfiguration jmx,
+                         GossipConfiguration gossip, String restartStateFilename) {
+        this.serviceUrl = serviceUrl;
+        this.networkInterface = networkInterface;
+        this.ipV6 = ipV6;
+        this.serviceProperties = serviceProperties;
+        this.services = services;
+        this.serviceCollections = serviceCollections;
+        this.templates = templates;
+        this.variables = variables;
+        this.uniqueDirectories = uniqueDirectories;
+        this.additionalPorts = additionalPorts;
+        this.totalOrderingFrom = totalOrderingFrom;
+        this.totalOrderingVariable = totalOrderingVariable;
+        this.verboseTemplating = verboseTemplating;
+        this.jmx = jmx;
+        if (gossip != null) {
+            this.gossip = gossip;
+        }
+        if (restartStateFilename != null) {
+            restartStateFile = restartStateFilename;
+        }
     }
 
     /**
@@ -85,6 +93,6 @@ public class Configuration {
      * @throws SocketException
      */
     public AutoConfigure construct() throws SocketException {
-	return new AutoConfigure(this);
+        return new AutoConfigure(this);
     }
 }

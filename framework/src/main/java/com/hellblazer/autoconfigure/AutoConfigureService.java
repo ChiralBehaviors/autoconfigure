@@ -43,35 +43,37 @@ public abstract class AutoConfigureService {
      * @throws JsonParseException
      */
     public static Configuration configurationFrom(String configurationResource)
-	    throws JsonParseException, JsonMappingException, IOException {
-	File configFile = new File(configurationResource);
-	if (configFile.exists()) {
-	    return YamlHelper.fromYaml(configFile);
-	}
-	URL url = getURL(configurationResource);
-	if (url == null) {
-	    throw new IllegalArgumentException(
-		    String.format("No such configuration resource: %s",
-			    configurationResource));
-	}
-	return YamlHelper.fromYaml(url.openStream());
+                                                                               throws JsonParseException,
+                                                                               JsonMappingException,
+                                                                               IOException {
+        File configFile = new File(configurationResource);
+        if (configFile.exists()) {
+            return YamlHelper.fromYaml(configFile);
+        }
+        URL url = getURL(configurationResource);
+        if (url == null) {
+            throw new IllegalArgumentException(
+                                               String.format("No such configuration resource: %s",
+                                                             configurationResource));
+        }
+        return YamlHelper.fromYaml(url.openStream());
     }
 
     public static URL getURL(String fileName) {
-	URL url;
-	ClassLoader cl = Thread.currentThread().getContextClassLoader();
-	url = cl.getResource(fileName);
-	if (url == null) {
-	    cl = AutoConfigureService.class.getClassLoader();
-	    url = cl.getResource(fileName);
-	}
-	return url;
+        URL url;
+        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        url = cl.getResource(fileName);
+        if (url == null) {
+            cl = AutoConfigureService.class.getClassLoader();
+            url = cl.getResource(fileName);
+        }
+        return url;
     }
 
     private final AutoConfigure autoConfigure;
 
     public AutoConfigureService(AutoConfigure autoConfigure) {
-	this.autoConfigure = autoConfigure;
+        this.autoConfigure = autoConfigure;
     }
 
     /**
@@ -82,13 +84,15 @@ public abstract class AutoConfigureService {
      * @throws SocketException
      */
     public AutoConfigureService(Configuration configuration)
-	    throws SocketException {
-	this(configuration.construct());
+                                                            throws SocketException {
+        this(configuration.construct());
     }
 
     public AutoConfigureService(String configurationResource)
-	    throws JsonParseException, JsonMappingException, IOException {
-	this(configurationFrom(configurationResource));
+                                                             throws JsonParseException,
+                                                             JsonMappingException,
+                                                             IOException {
+        this(configurationFrom(configurationResource));
     }
 
     /**
@@ -103,29 +107,29 @@ public abstract class AutoConfigureService {
      *             - D'oh!
      */
     abstract public void fail(Map<String, File> configurations)
-	    throws Exception;
+                                                               throws Exception;
 
     /**
      * 
      * @return the discovery scope used by this process
      */
     public ServiceScope getDiscoveryScope() {
-	return autoConfigure.getDiscoveryScope();
+        return autoConfigure.getDiscoveryScope();
     }
 
     /**
      * Start the auto configuration service.
      */
     public void start(long timeout, TimeUnit unit) {
-	start(null, timeout, unit);
+        start(null, timeout, unit);
     }
 
     /**
      * Start the auto configuration service.
      */
     public void start(Map<String, String> environment, long timeout,
-	    TimeUnit unit) {
-	autoConfigure.configure(environment, this, timeout, unit);
+                      TimeUnit unit) {
+        autoConfigure.configure(environment, this, timeout, unit);
     }
 
     /**
@@ -138,5 +142,5 @@ public abstract class AutoConfigureService {
      *             - D'oh!
      */
     abstract public void succeed(Map<String, File> configurations)
-	    throws Exception;
+                                                                  throws Exception;
 }
