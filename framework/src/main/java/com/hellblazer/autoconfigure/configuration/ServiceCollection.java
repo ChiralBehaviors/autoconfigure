@@ -14,12 +14,12 @@
  */
 package com.hellblazer.autoconfigure.configuration;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.hellblazer.autoconfigure.AutoConfigure;
 import com.hellblazer.autoconfigure.Cluster;
@@ -39,7 +39,7 @@ public class ServiceCollection {
 	public Map<String, String> properties = new HashMap<>();
 	public String service;
 	public String variable;
-	private List<Service> discovered = new ArrayList<>();
+	private List<Service> discovered = new CopyOnWriteArrayList<>();
 
 	/**
 	 * @return the query filter for the service collection
