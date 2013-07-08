@@ -14,6 +14,7 @@
  */
 package com.hellblazer.autoconfigure.configuration;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -34,82 +35,85 @@ import com.hellblazer.slp.ServiceScope;
  * 
  */
 public class ServiceCollection {
-	public int cardinality = 0;
-	public String idProperty = "totalOrderingIndex";
-	public Map<String, String> properties = new HashMap<>();
-	public String service;
-	public String variable;
-	private List<Service> discovered = new CopyOnWriteArrayList<>();
+    public int cardinality = 0;
+    public String idProperty = "totalOrderingIndex";
+    public Map<String, String> properties = new HashMap<>();
+    public String service;
+    public String variable;
+    private final List<Service> discovered = new CopyOnWriteArrayList<>();
 
-	/**
-	 * @return the query filter for the service collection
-	 */
-	public String constructFilter() {
-		return AutoConfigure.constructFilter(service, properties);
-	}
+    /**
+     * @return the query filter for the service collection
+     */
+    public String constructFilter() {
+	return AutoConfigure.constructFilter(service, properties);
+    }
 
-	/**
-	 * @return the Cluster of service models discovered for this collection
-	 */
-	public Cluster<Service> getCluster() {
-		return new Cluster<>(discovered);
-	}
+    /**
+     * @return the Cluster of service models discovered for this collection
+     */
+    public Cluster<Service> getCluster() {
+	return new Cluster<>(canonicalizeServices());
+    }
 
-	public synchronized void discover(ServiceReference reference) {
-		discovered.add(new Service(reference.getUrl(), reference
-				.getProperties()));
-		canonicalizeServices();
-	}
+    public synchronized void discover(ServiceReference reference) {
+	discovered.add(new Service(reference.getUrl(), reference
+		.getProperties()));
+    }
 
-	/**
-	 * @return the number of services discovered for this collection
-	 */
-	public int getDiscoveredCardinality() {
-		return discovered.size();
-	}
+    /**
+     * @return the number of services discovered for this collection
+     */
+    public int getDiscoveredCardinality() {
+	return discovered.size();
+    }
 
-	/**
-	 * Answer the index of the service registered with the uuid in the total
-	 * ordering of the receiver's services
-	 * 
-	 * @param uuid
-	 * @return the String representing the index of this service, or null if not
-	 *         found
-	 */
-	public String totalOrderingIndexOf(UUID uuid) {
-		String registration = uuid.toString();
-		for (Service service : discovered) {
-			if (registration.equals(service.getProperties().get(
-					ServiceScope.SERVICE_REGISTRATION))) {
-				return service.getProperties().get(idProperty);
-			}
-		}
-		return null;
+    /**
+     * Answer the index of the service registered with the uuid in the total
+     * ordering of the receiver's services
+     * 
+     * @param uuid
+     * @return the String representing the index of this service, or null if not
+     *         found
+     */
+    public String totalOrderingIndexOf(UUID uuid) {
+	String registration = uuid.toString();
+	for (Service service : discovered) {
+	    if (registration.equals(service.getProperties().get(
+		    ServiceScope.SERVICE_REGISTRATION))) {
+		return service.getProperties().get(idProperty);
+	    }
 	}
+	return null;
+    }
 
-	/**
-	 * @return true if all the services have been discovered
-	 */
-	public boolean isSatisfied() {
-		return discovered.size() == cardinality;
-	}
+    /**
+     * @return true if all the services have been discovered
+     */
+    public boolean isSatisfied() {
+	return discovered.size() == cardinality;
+    }
 
-	@Override
-	public String toString() {
-		return String.format("Service Collection [%s] [%s] properties %s",
-				cardinality, service, properties);
-	}
+    @Override
+    public String toString() {
+	return String.format("Service Collection [%s] [%s] properties %s",
+		cardinality, service, properties);
+    }
 
-	/**
-	 * Canonicalize the services, providing a total ordering of the services.
-	 * Add the unique index of each service to its properties, using the
-	 * supplied idProperty as the property key
-	 */
-	protected void canonicalizeServices() {
-		Collections.sort(discovered);
-		for (int i = 1; i <= discovered.size(); i++) {
-			discovered.get(i - 1).getProperties()
-					.put(idProperty, String.valueOf(i));
-		}
+    /**
+     * Canonicalize the services, providing a total ordering of the services.
+     * Add the unique index of each service to its properties, using the
+     * supplied idProperty as the property key
+     */
+    protected List<Service> canonicalizeServices() {
+	List<Service> canonicalized = new ArrayList<>(discovered);
+	Collections.sort(canonicalized);
+	for (int i = 1; i <= canonicalized.size(); i++) {
+	    canonicalized.get(i - 1).getProperties()
+		    .put(idProperty, String.valueOf(i));
 	}
+	discovered.clear();
+	discovered.addAll(canonicalized);
+	return canonicalized;
+    }
 }
