@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.hellblazer.autoconfigure.configuration.Configuration;
 import com.hellblazer.autoconfigure.configuration.YamlHelper;
+import com.hellblazer.slp.ServiceReference;
 import com.hellblazer.slp.ServiceScope;
 
 /**
@@ -115,6 +116,15 @@ public abstract class AutoConfigureService {
      */
     public ServiceScope getDiscoveryScope() {
         return autoConfigure.getDiscoveryScope();
+    }
+
+    /**
+     * Answer the service reference of the configured service
+     * 
+     * @return the service reference of the configured service
+     */
+    public ServiceReference getServiceReference() {
+        return autoConfigure.getServiceReference();
     }
 
     /**
