@@ -118,6 +118,13 @@ public abstract class AutoConfigureService {
     }
 
     /**
+     * Convenience method to add additional properties after the service has been registered.
+     */
+    public void addServiceProperties(Map<String, String> additionalProperties) {
+        autoConfigure.addServiceProperties(additionalProperties);
+    }
+
+    /**
      * Start the auto configuration service.
      */
     public void start(long timeout, TimeUnit unit) {

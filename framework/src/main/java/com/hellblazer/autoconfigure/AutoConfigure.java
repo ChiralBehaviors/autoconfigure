@@ -771,6 +771,14 @@ public class AutoConfigure {
     }
 
     /**
+     * Update the registered service by adding the given properties to the existing ones
+     */
+    protected void addServiceProperties(Map<String, String> additionalProperties) {
+    registeredServiceProperties.putAll(additionalProperties);
+    discovery.setProperties(serviceRegistration.get(), registeredServiceProperties);
+    }
+
+    /**
      * Register the listeners for the required service collections on the
      * discovery scope
      */
