@@ -4,7 +4,7 @@
 	<groupId>com.hellblazer.autoconfigure</groupId>
 	<artifactId>autoconfigure.app</artifactId>
 	<packaging>pom</packaging>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1</version>
 	<name>Autoconfigure Application</name>
 	<description>A simple way to configure the hell that is the current state of distributed systems</description>
 
@@ -44,12 +44,12 @@
 			<dependency>
 				<groupId>com.hellblazer</groupId>
 				<artifactId>utils</artifactId>
-				<version>0.0.1-SNAPSHOT</version>
+				<version>0.0.1</version>
 			</dependency>
 			<dependency>
 				<groupId>com.hellblazer</groupId>
 				<artifactId>nexus</artifactId>
-				<version>1.0.1-SNAPSHOT</version>
+				<version>1.0.1</version>
 			</dependency>
 			<dependency>
 				<groupId>junit</groupId>
@@ -60,13 +60,13 @@
 			<dependency>
 				<groupId>com.fasterxml.jackson.dataformat</groupId>
 				<artifactId>jackson-dataformat-yaml</artifactId>
-				<version>2.1.4</version>
+				<version>2.2.2</version>
 				<optional>true</optional>
 			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
-				<version>2.1.4</version>
+				<version>2.2.2</version>
 				<optional>true</optional>
 			</dependency>
 			<dependency>

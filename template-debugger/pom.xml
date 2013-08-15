@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.hellblazer.autoconfigure</groupId>
 		<artifactId>autoconfigure.app</artifactId>
-		<version>0.0.1-SNAPSHOT</version>
+		<version>0.0.1</version>
 	</parent>
 	<artifactId>template-debugger</artifactId>
 	<name>Autoconfigure Template Debugger</name>
@@ -13,7 +13,7 @@
 		<dependency>
 			<groupId>com.hellblazer.autoconfigure</groupId>
 			<artifactId>framework</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>0.0.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
